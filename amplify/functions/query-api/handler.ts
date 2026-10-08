@@ -1,16 +1,15 @@
-import type { AppSyncResolverEvent } from "aws-lambda";
 import { buildDashboard, buildFlatDetail } from "../../../lib/core/summary";
 import { buildFacts, ruleBasedAnswer } from "../../../lib/core/insights";
 import type { BillRec, FlatRec } from "../../../lib/core/types";
 import { getSociety, loadSocietyData, queryAll, T } from "../shared/db";
-import { assertSocietyAdmin, emailOf } from "../shared/identity";
+import { assertSocietyAdmin, emailOf, type ResolverEvent } from "../shared/identity";
 import { askModel } from "../shared/ai";
 
 type Args = Record<string, any>;
 
-export const handler = async (event: AppSyncResolverEvent<Args>) => {
+export const handler = async (event: ResolverEvent<Args>) => {
   const a = event.arguments;
-  switch (event.info.fieldName) {
+  switch (event.fieldName) {
     case "getDashboard":
       assertSocietyAdmin(event.identity, a.societyId);
       return getDashboard(a.societyId);
@@ -23,7 +22,7 @@ export const handler = async (event: AppSyncResolverEvent<Args>) => {
     case "myResidentPortal":
       return residentPortal(await emailOf(event.identity));
     default:
-      throw new Error(`Unknown field ${event.info.fieldName}`);
+      throw new Error(`Unknown field ${event.fieldName}`);
   }
 };
 

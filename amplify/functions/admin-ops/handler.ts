@@ -1,5 +1,4 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import type { AppSyncResolverEvent } from "aws-lambda";
 import {
   AdminAddUserToGroupCommand,
   AdminCreateUserCommand,
@@ -11,15 +10,15 @@ import { generateFlats, generateSeed } from "../../../lib/core/seed";
 import { parseReadingsCsv } from "../../../lib/core/csv";
 import type { FlatRec } from "../../../lib/core/types";
 import { batchPut, ddb, getSociety, listFlats, putItem, queryAll, T, updateFlatResident, type SocietyRec } from "../shared/db";
-import { assertSocietyAdmin, cognito, emailOf, usernameOf } from "../shared/identity";
+import { assertSocietyAdmin, cognito, emailOf, usernameOf, type ResolverEvent } from "../shared/identity";
 import { subscribeAdminEmail } from "../shared/notify";
 
 type Args = Record<string, any>;
 const USER_POOL_ID = () => process.env.USER_POOL_ID!;
 
-export const handler = async (event: AppSyncResolverEvent<Args>) => {
+export const handler = async (event: ResolverEvent<Args>) => {
   const a = event.arguments;
-  switch (event.info.fieldName) {
+  switch (event.fieldName) {
     case "setupSociety":
       return setupSociety(event.identity, a);
     case "seedDemoData":
@@ -32,7 +31,7 @@ export const handler = async (event: AppSyncResolverEvent<Args>) => {
       assertSocietyAdmin(event.identity, a.societyId);
       return importCsv(a.societyId, a.csv);
     default:
-      throw new Error(`Unknown field ${event.info.fieldName}`);
+      throw new Error(`Unknown field ${event.fieldName}`);
   }
 };
 

@@ -33,3 +33,14 @@ export async function emailOf(identity: unknown): Promise<string> {
   if (!email) throw new Error("No email on this account");
   return email.toLowerCase();
 }
+
+/**
+ * Payload Amplify's function directive sends to a resolver Lambda (see the generated
+ * request mapping template): fieldName is top level, there is no `info` object.
+ */
+export interface ResolverEvent<A = Record<string, any>> {
+  typeName: string;
+  fieldName: string;
+  arguments: A;
+  identity: unknown;
+}

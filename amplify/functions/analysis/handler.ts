@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { AppSyncResolverEvent, ScheduledEvent } from "aws-lambda";
+import type { ScheduledEvent } from "aws-lambda";
 import { detectLeaks } from "../../../lib/core/leak";
 import { computeBills } from "../../../lib/core/billing";
 import { monthlyByFlat, round } from "../../../lib/core/aggregate";
@@ -7,14 +7,14 @@ import { buildDashboard, monthCost, sourceMonths, type SocietyData } from "../..
 import { buildFacts, ruleBasedSummary } from "../../../lib/core/insights";
 import { addMonths, localDay, localMonth, monthLabel } from "../../../lib/core/time";
 import { batchPut, getSociety, listSocieties, loadSocietyData, putItem, type SocietyRec } from "../shared/db";
-import { assertSocietyAdmin } from "../shared/identity";
+import { assertSocietyAdmin, type ResolverEvent } from "../shared/identity";
 import { notify } from "../shared/notify";
 import { askModel } from "../shared/ai";
 
 type Task = "leaks" | "billing" | "insights" | "all";
 
-export const handler = async (event: AppSyncResolverEvent<{ societyId: string; task: Task; month?: string }> | ScheduledEvent) => {
-  if ("info" in event) {
+export const handler = async (event: ResolverEvent<{ societyId: string; task: Task; month?: string }> | ScheduledEvent) => {
+  if ("fieldName" in event) {
     const { societyId, task, month } = event.arguments;
     assertSocietyAdmin(event.identity, societyId);
     const society = await getSociety(societyId);

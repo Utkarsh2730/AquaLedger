@@ -72,7 +72,7 @@ function fakeSend(cmd: any): any {
 
 const cognitoCalls: string[] = [];
 const appsync = (fieldName: string, args: Record<string, unknown>, groups: string[] = []) =>
-  ({ arguments: args, info: { fieldName }, identity: { username: "user-1", sub: "user-1", claims: { email: "admin@example.com", "cognito:groups": groups } } }) as any;
+  ({ typeName: "Mutation", fieldName, arguments: args, identity: { username: "user-1", sub: "user-1", claims: { email: "admin@example.com", "cognito:groups": groups } } }) as any;
 
 beforeEach(() => {
   db = new Map();
