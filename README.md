@@ -100,6 +100,7 @@ npm test             # unit tests (lib/core) + end-to-end handler tests against 
 npm run typecheck    # frontend + backend
 npm run build        # static export to out/
 npm run demo         # offline demo mode (no AWS)
+npm run record:tour  # re-record the landing-page tour video after UI changes (needs ffmpeg)
 ```
 
 CSV format for imports (`flat, date, hour, litres`; leave `hour` empty for daily totals):
