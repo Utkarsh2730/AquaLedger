@@ -35,6 +35,19 @@ export default function DashboardPage() {
     load();
   }, [load]);
 
+  async function loadDemo() {
+    setRunning(true);
+    setError(null);
+    try {
+      unwrap(await client.mutations.seedDemoData({ societyId }));
+      await load();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setRunning(false);
+    }
+  }
+
   async function runAnalysis() {
     setRunning(true);
     try {
@@ -53,6 +66,30 @@ export default function DashboardPage() {
   const k = d.kpis;
   const prevMonths = d.monthly.filter((m) => m.month < d.currentMonth);
   const lastComplete = prevMonths[prevMonths.length - 1];
+  const noData = k.flats === 0 || d.monthly.every((m) => m.consumedLitres === 0);
+
+  if (noData) {
+    return (
+      <div className="mx-auto max-w-xl space-y-4 pt-8">
+        <PageHeader title={data.society.name ?? "Dashboard"} subtitle={`${k.flats} flats · no meter readings yet`} />
+        <ErrorBox error={error} />
+        <Card>
+          <p className="text-sm text-slate-600">
+            Load 6 months of realistic demo data (readings with summer spikes, tanker deliveries and a hidden leak in flat B-202), or start adding real readings and
+            supply entries.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button onClick={loadDemo} disabled={running}>
+              {running ? "Loading demo data… (~20 s)" : "Load demo data"}
+            </Button>
+            <Link href="/readings" className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              Add readings
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

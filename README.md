@@ -58,6 +58,8 @@ npm run dev                 # http://localhost:3000
 1. Push this repo to GitHub.
 2. AWS console → Amplify → *Create new app* → GitHub → pick the repo and branch.
 3. Amplify detects `amplify.yml`; it deploys the backend and the static site on every push.
+4. Give the app a service role with **AmplifyBackendDeployFullAccess** (App settings → IAM roles) or the backend step fails with a credentials error.
+5. The site is a static export (`out/`). If the build succeeds but every page is a 404, the app was created as a server-side (compute) app: run `aws amplify update-app --app-id <id> --platform WEB` and redeploy.
 
 Then:
 

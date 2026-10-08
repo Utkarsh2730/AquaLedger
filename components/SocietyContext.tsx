@@ -29,12 +29,15 @@ export function SocietyProvider({ children }: { children: ReactNode }) {
 
   const load = useCallback(
     async (force = false) => {
-      const roles = await getRoles(force);
+      // On onboarding, always use a fresh token so a society created earlier (or by a request
+      // that timed out in the browser) is seen and not created twice.
+      const roles = await getRoles(force || onOnboarding);
       const id = roles.societyIds[0] ?? null;
       setSocietyId(id);
       setChecked(true);
       if (!id && roles.isResident && !roles.isAdmin) router.replace("/resident");
       else if (!id && !onOnboarding) router.replace("/onboarding");
+      else if (id && onOnboarding && !force) router.replace("/dashboard");
     },
     [router, onOnboarding]
   );

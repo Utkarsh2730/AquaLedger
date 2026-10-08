@@ -23,6 +23,8 @@ const INDEXES: Record<string, Record<string, [string, string?]>> = {
 const pk = (table: string) => (table === "SOCIETY-table" ? "societyId" : "id");
 
 let db: Map<string, Map<string, any>>;
+/** set to a table name to make the next BatchWrite into it throw (simulates a failure mid-seed) */
+let failBatchInto: string | null = null;
 const tbl = (t: string) => db.get(t) ?? db.set(t, new Map()).get(t)!;
 
 function fakeSend(cmd: any): any {
@@ -40,6 +42,10 @@ function fakeSend(cmd: any): any {
       return {};
     }
     case "BatchWriteCommand":
+      if (failBatchInto && Object.keys(i.RequestItems).includes(failBatchInto)) {
+        failBatchInto = null;
+        throw new Error("ProvisionedThroughputExceededException (simulated)");
+      }
       for (const [t, reqs] of Object.entries(i.RequestItems) as [string, any[]][]) {
         for (const r of reqs) {
           if (r.PutRequest) tbl(t).set(r.PutRequest.Item[pk(t)], structuredClone(r.PutRequest.Item));
@@ -76,7 +82,9 @@ const appsync = (fieldName: string, args: Record<string, unknown>, groups: strin
 
 beforeEach(() => {
   db = new Map();
+  failBatchInto = null;
   cognitoCalls.length = 0;
+  vi.useRealTimers();
   vi.spyOn(ddb, "send").mockImplementation(async (cmd: any) => fakeSend(cmd));
   vi.spyOn(cognito, "send").mockImplementation(async (cmd: any) => {
     cognitoCalls.push(cmd.constructor.name);
@@ -133,6 +141,40 @@ describe("end-to-end through the Lambda handlers", () => {
     // CSV import
     const csv: any = await adminOps(appsync("importReadingsCsv", { societyId: sid, csv: "flat,date,litres\nA-101,2026-10-01,400\nZ-1,2026-10-01,3" }, admin));
     expect(csv).toMatchObject({ imported: 1, errorCount: 1 });
+  });
+
+  it("does not make the user admin of a half-built society when seeding fails", async () => {
+    failBatchInto = "READING-table";
+    await expect(adminOps(appsync("setupSociety", { name: "S", blocks: ["A"], flatsPerBlock: 4, seedDemo: true }))).rejects.toThrow(/simulated/);
+    expect(cognitoCalls).toEqual([]); // no group created, user not added: retrying is clean
+    const ok: any = await adminOps(appsync("setupSociety", { name: "S", blocks: ["A"], flatsPerBlock: 4, seedDemo: true }));
+    expect(ok.seeded).toBe(true);
+    expect(cognitoCalls).toEqual(["CreateGroupCommand", "AdminAddUserToGroupCommand", "AdminAddUserToGroupCommand"]);
+  });
+
+  it("finds the planted leak when the demo is presented days after seeding", async () => {
+    const created: any = await adminOps(appsync("setupSociety", { name: "S", blocks: ["A", "B", "C", "D"], flatsPerBlock: 10, seedDemo: true }));
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 4 * 86_400_000);
+    const res: any = await analysis(appsync("runAnalysis", { societyId: created.societyId, task: "leaks" }, [created.societyId]));
+    expect(res.leaks.flats.sort()).toEqual(["B-202 (night_flow)", "B-202 (spike)"]);
+  });
+
+  it("never resets bills the committee already issued or marked paid", async () => {
+    const created: any = await adminOps(appsync("setupSociety", { name: "S", blocks: ["A", "B"], flatsPerBlock: 4, seedDemo: true }));
+    const admin = [created.societyId];
+    await analysis(appsync("runAnalysis", { societyId: created.societyId, task: "billing" }, admin));
+    const bills = [...tbl("BILL-table").values()];
+    bills[0].status = "paid";
+    bills[1].status = "issued";
+    const amount0 = bills[0].amount;
+    bills[0].amount = 1; // pretend it was edited/paid at an older amount
+    const again: any = await analysis(appsync("runAnalysis", { societyId: created.societyId, task: "billing" }, admin));
+    expect(again.billing.kept).toBe(2);
+    expect(tbl("BILL-table").get(bills[0].id)).toMatchObject({ status: "paid", amount: 1 });
+    expect(tbl("BILL-table").get(bills[1].id).status).toBe("issued");
+    expect(tbl("BILL-table").get(bills[2].id).status).toBe("draft");
+    expect(amount0).toBeGreaterThan(1);
   });
 
   it("raises a live alert from the meter ingest URL when a tap is left open", async () => {

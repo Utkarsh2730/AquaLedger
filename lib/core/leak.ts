@@ -127,6 +127,22 @@ export function detectNightFlow(flats: FlatRec[], readings: ReadingRec[], opts: 
   return findings;
 }
 
+/**
+ * The day the nightly scan should judge: yesterday, unless the data stops earlier (e.g. demo
+ * data loaded a few days ago, or a meter feed that lags), in which case the last day with
+ * metered data. Live meter ticks don't count, so one simulator run can't hide older days.
+ */
+export function pickTargetDay(readings: ReadingRec[], now = new Date(), tzOffsetMin = DEFAULT_TZ_OFFSET_MIN): string {
+  const yesterday = addDays(localDay(now, tzOffsetMin), -1);
+  let last = "";
+  for (const r of readings) {
+    if (r.source === "iot") continue;
+    const day = localDay(r.timestamp, tzOffsetMin);
+    if (day > last) last = day;
+  }
+  return last && last < yesterday ? last : yesterday;
+}
+
 export function detectLeaks(flats: FlatRec[], readings: ReadingRec[], opts: LeakOptions = {}): LeakFinding[] {
   return [...detectSpikes(flats, readings, opts), ...detectNightFlow(flats, readings, opts)];
 }

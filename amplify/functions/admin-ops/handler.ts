@@ -48,11 +48,6 @@ async function setupSociety(identity: unknown, a: Args) {
   if (blocks.length * perBlock > 2000) throw new Error("Up to 2,000 flats per society");
 
   const societyId = randomUUID();
-  // The society's own Cognito group is what the data-layer auth rules check.
-  await cognito.send(new CreateGroupCommand({ UserPoolId: USER_POOL_ID(), GroupName: societyId, Description: `Admins of ${a.name}` }));
-  await addToGroup(username, societyId);
-  await addToGroup(username, "ADMINS");
-
   const society: SocietyRec = {
     societyId,
     name: a.name,
@@ -63,16 +58,24 @@ async function setupSociety(identity: unknown, a: Args) {
     deviceToken: randomBytes(18).toString("base64url"),
     adminEmails: [email],
   };
+  // Write all the data first and grant access last: if anything fails part-way, the user is not
+  // left as admin of a half-built society, and simply retrying creates a clean one.
   await putItem("Society", society);
-  await subscribeAdminEmail(societyId, email).catch((err) => console.error("SNS subscribe failed", err));
-
+  let result: Record<string, unknown>;
   if (a.seedDemo) {
-    const seeded = await seedDemoData(societyId, blocks, perBlock);
-    return { societyId, ...seeded };
+    result = await seedDemoData(societyId, blocks, perBlock);
+  } else {
+    const flats = generateFlats(societyId, blocks, perBlock);
+    await batchPut("Flat", flats);
+    result = { flats: flats.length, seeded: false };
   }
-  const flats = generateFlats(societyId, blocks, perBlock);
-  await batchPut("Flat", flats);
-  return { societyId, flats: flats.length, seeded: false };
+
+  // The society's own Cognito group is what the data-layer auth rules check.
+  await cognito.send(new CreateGroupCommand({ UserPoolId: USER_POOL_ID(), GroupName: societyId, Description: `Admins of ${a.name}` }));
+  await addToGroup(username, societyId);
+  await addToGroup(username, "ADMINS");
+  await subscribeAdminEmail(societyId, email).catch((err) => console.error("SNS subscribe failed", err));
+  return { societyId, ...result };
 }
 
 /**

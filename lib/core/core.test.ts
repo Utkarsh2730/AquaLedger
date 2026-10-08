@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateSeed } from "./seed";
-import { detectLeaks, detectLiveSpike, detectNightFlow, detectSpikes } from "./leak";
+import { detectLeaks, detectLiveSpike, detectNightFlow, detectSpikes, pickTargetDay } from "./leak";
 import { computeBills, equalSplit } from "./billing";
 import { forecastMonth } from "./forecast";
 import { buildDashboard, buildFlatDetail } from "./summary";
@@ -59,6 +59,20 @@ describe("leak detection", () => {
   it("spike rule ignores normal days", () => {
     const quiet = seed.readings.filter((r) => r.flatId !== seed.leakFlatId);
     expect(detectSpikes(seed.flats, quiet, { now })).toHaveLength(0);
+  });
+
+  it("still finds the planted leak when the demo data is days old", () => {
+    const later = new Date(now.getTime() + 4 * 86_400_000);
+    // naive "yesterday" has no data any more, so the spike rule goes blind
+    expect(detectLeaks(seed.flats, seed.readings, { now: later }).map((f) => f.type)).toEqual(["night_flow"]);
+    const targetDay = pickTargetDay(seed.readings, later);
+    expect(targetDay).toBe("2026-10-07");
+    expect(new Set(detectLeaks(seed.flats, seed.readings, { now: later, targetDay }).map((f) => f.type))).toEqual(new Set(["spike", "night_flow"]));
+    // live meter ticks today don't move the target day
+    const tick = { ...seed.readings[0], id: "t", timestamp: later.toISOString(), source: "iot" as const };
+    expect(pickTargetDay([...seed.readings, tick], later)).toBe("2026-10-07");
+    // fresh data: plain yesterday
+    expect(pickTargetDay(seed.readings, now)).toBe("2026-10-07");
   });
 
   it("live spike fires for an open tap but not a normal tick", () => {
