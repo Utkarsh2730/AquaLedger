@@ -11,11 +11,11 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p amplify",
     "sandbox": "ampx sandbox",
     "sandbox:delete": "ampx sandbox delete",
-    "demo": "node scripts/ensure-outputs.mjs && NEXT_PUBLIC_DEMO_MODE=1 NEXT_DIST_DIR=.next-demo next dev",
+    "demo": "node scripts/ensure-outputs.mjs && node scripts/check-port.mjs && NEXT_PUBLIC_DEMO_MODE=1 NEXT_DIST_DIR=.next-demo next dev",
     "build:demo": "node scripts/ensure-outputs.mjs && NEXT_PUBLIC_DEMO_MODE=1 NEXT_DIST_DIR=.next-demo-build next build",
     "record:tour": "node scripts/record-tour.mjs",
     "postinstall": "node scripts/ensure-outputs.mjs",
-    "predev": "node scripts/ensure-outputs.mjs",
+    "predev": "node scripts/ensure-outputs.mjs && node scripts/check-port.mjs",
     "prebuild": "node scripts/ensure-outputs.mjs",
     "pretypecheck": "node scripts/ensure-outputs.mjs"
   },
