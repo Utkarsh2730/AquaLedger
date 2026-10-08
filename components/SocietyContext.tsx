@@ -22,7 +22,8 @@ export function useSociety() {
 /** Resolves which society the signed-in admin manages, routing to onboarding/resident as needed. */
 export function SocietyProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
+  // next.config uses trailingSlash, so paths arrive as "/onboarding/"
+  const onOnboarding = usePathname().replace(/\/+$/, "") === "/onboarding";
   const [societyId, setSocietyId] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
 
@@ -33,9 +34,9 @@ export function SocietyProvider({ children }: { children: ReactNode }) {
       setSocietyId(id);
       setChecked(true);
       if (!id && roles.isResident && !roles.isAdmin) router.replace("/resident");
-      else if (!id && pathname !== "/onboarding") router.replace("/onboarding");
+      else if (!id && !onOnboarding) router.replace("/onboarding");
     },
-    [router, pathname]
+    [router, onOnboarding]
   );
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export function SocietyProvider({ children }: { children: ReactNode }) {
   }, [load]);
 
   if (!checked) return <Spinner />;
-  if (pathname === "/onboarding") return <Ctx.Provider value={{ societyId: societyId ?? "", refresh: () => load(true) }}>{children}</Ctx.Provider>;
+  if (onOnboarding) return <Ctx.Provider value={{ societyId: societyId ?? "", refresh: () => load(true) }}>{children}</Ctx.Provider>;
   if (!societyId) return <Spinner label="Redirecting…" />;
   return <Ctx.Provider value={{ societyId, refresh: () => load(true) }}>{children}</Ctx.Provider>;
 }
