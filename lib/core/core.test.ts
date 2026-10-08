@@ -199,3 +199,52 @@ describe("resident access codes", () => {
     expect(residentLink("https://app.example/", "k7m2qx9p4hdr")).toBe("https://app.example/resident/?code=K7M2-QX9P-4HDR");
   });
 });
+
+import { accessEmail, parseEmailList, parseResidentEmails } from "./residents";
+
+describe("resident email import", () => {
+  const flats = [
+    { id: "f1", block: "A", number: "101" },
+    { id: "f2", block: "A", number: "102" },
+    { id: "f3", block: "B", number: "202" },
+  ];
+
+  it("reads the usual register shapes", () => {
+    const csv = [
+      "Flat,Name,Email",
+      "A-101, Rahul Sharma, Rahul@Example.com",
+      "a 101,Priya,priya@example.com",
+      "A,102,owner@example.com; tenant@example.com",
+      '"B/202","b202@example.com rent@example.com"',
+      "C-901,ghost@example.com",
+      "A-102,not-an-email@",
+      "A-101,rahul@example.com",
+      "",
+    ].join("\n");
+    const r = parseResidentEmails(csv, flats);
+    expect(r.byFlat.get("f1")).toEqual(["rahul@example.com", "priya@example.com"]);
+    expect(r.byFlat.get("f2")).toEqual(["owner@example.com", "tenant@example.com"]);
+    expect(r.byFlat.get("f3")).toEqual(["b202@example.com", "rent@example.com"]);
+    expect(r.unknownFlats).toEqual(["C-901"]);
+    expect(r.badEmails).toEqual(["not-an-email@"]);
+  });
+
+  it("caps emails per flat", () => {
+    const csv = Array.from({ length: 9 }, (_, i) => `A-101,r${i}@example.com`).join("\n");
+    const r = parseResidentEmails(csv, flats);
+    expect(r.byFlat.get("f1")).toHaveLength(6);
+    expect(r.truncated).toEqual(["A-101"]);
+  });
+
+  it("parses a typed list", () => {
+    expect(parseEmailList("A@x.com, b@y.in  a@x.com; nope")).toEqual({ emails: ["a@x.com", "b@y.in"], bad: ["nope"] });
+  });
+
+  it("writes an email with the flat and code, and escapes the society name", () => {
+    const m = accessEmail({ societyName: "Green <Meadows>", flat: "A-101", code: "k7m2qx9p4hdr", link: "https://x.app/resident/?code=K7M2-QX9P-4HDR", portalUrl: "https://x.app/resident/" });
+    expect(m.subject).toContain("A-101");
+    expect(m.text).toContain("K7M2-QX9P-4HDR");
+    expect(m.html).toContain("Green &lt;Meadows&gt;");
+    expect(m.html).not.toContain("<Meadows>");
+  });
+});

@@ -46,6 +46,8 @@ const schema = a
         /** SHA-256 of the flat's resident access code (never the code itself); absent = no access issued */
         accessCodeHash: a.string(),
         accessIssuedAt: a.datetime(),
+        /** where the flat's access email goes (the committee's register); never shown to residents */
+        residentEmails: a.email().array(),
       })
       .secondaryIndexes((index) => [
         index("societyId").name("bySociety").queryField("listFlatsBySociety"),
@@ -161,6 +163,14 @@ const schema = a
     issueResidentAccess: a
       .mutation()
       .arguments({ societyId: a.id().required(), flatId: a.id().required() })
+      .returns(a.json())
+      .authorization((allow) => [allow.authenticated()])
+      .handler(a.handler.function(adminOps)),
+
+    // emails each listed flat a fresh access code (the old one stops working); a few flats per call
+    emailResidentAccess: a
+      .mutation()
+      .arguments({ societyId: a.id().required(), flatIds: a.id().array().required(), origin: a.string().required(), replaceExisting: a.boolean() })
       .returns(a.json())
       .authorization((allow) => [allow.authenticated()])
       .handler(a.handler.function(adminOps)),

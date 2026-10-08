@@ -50,6 +50,11 @@ export async function getRoles(forceRefresh = false) {
 
 export const meterIngestUrl: string | undefined = DEMO ? "demo://meter-ingest" : (outputs as { custom?: { meterIngestUrl?: string } }).custom?.meterIngestUrl;
 
+/** whether this backend can email residents (AQUALEDGER_SENDER_EMAIL was set at deploy); the demo simulates it */
+export const residentEmailEnabled: boolean = DEMO || Boolean((outputs as { custom?: { residentEmailEnabled?: boolean } }).custom?.residentEmailEnabled);
+
+export type EmailAccessResult = { flatId: string; flat: string; status: "sent" | "skipped" | "failed"; sentTo: string[]; reason?: string };
+
 /** Posts one smart-meter reading, exactly like scripts/meter_simulator.py does. */
 export async function postMeterReading(body: { societyId: string; flat: string; litres: number; periodMinutes: number }, token: string) {
   if (DEMO) return demoIngest(body, token);

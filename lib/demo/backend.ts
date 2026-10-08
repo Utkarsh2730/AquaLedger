@@ -14,7 +14,8 @@ import { ruleBasedAnswer, ruleBasedSummary } from "@/lib/core/insights";
 import { parseReadingsCsv } from "@/lib/core/csv";
 import { detectLiveSpike } from "@/lib/core/leak";
 import { addMonths, localMonth } from "@/lib/core/time";
-import { generateAccessCode, hashAccessCode, isWellFormedAccessCode } from "@/lib/core/access";
+import { generateAccessCode, hashAccessCode, isWellFormedAccessCode, residentLink } from "@/lib/core/access";
+import { accessEmail } from "@/lib/core/residents";
 import { flatLabel, type AlertRec, type BillRec, type FlatRec, type ReadingRec, type SupplyRec, type TankerRec } from "@/lib/core/types";
 
 export const DEMO_SOCIETY_ID = "demo-society";
@@ -296,6 +297,7 @@ export const demoClient = {
           { id: "meter", name: "Smart-meter endpoint", status: "pass", detail: "Simulated in the browser (Live meters page)." },
           { id: "ai-chat", name: "AI answers (chat)", status: "warn", detail: "Demo mode uses the free rule-based answers." },
           { id: "ai-insights", name: "AI monthly summaries", status: "warn", detail: "Demo mode uses the free rule-based summaries." },
+          { id: "resident-email", name: "Resident access emails", status: "warn", detail: "Demo mode shows the email residents would get instead of sending it." },
         ],
       });
     },
@@ -336,6 +338,34 @@ export const demoClient = {
       Object.assign(flat, { accessCodeHash: await hashAccessCode(code), accessIssuedAt: issuedAt });
       persist();
       return ok({ code, flat: flatLabel(flat), issuedAt });
+    },
+    emailResidentAccess: async ({ flatIds, origin, replaceExisting }: { flatIds: string[]; origin: string; replaceExisting?: boolean }) => {
+      const society = ensure();
+      await pause();
+      const results = [];
+      let preview: { to: string; subject: string; text: string } | undefined;
+      for (const flatId of flatIds) {
+        const flat = db.Flat.get(flatId) as FlatRec | undefined;
+        if (!flat) {
+          results.push({ flatId, flat: "?", status: "failed", sentTo: [], reason: "Flat not found in this society" });
+          continue;
+        }
+        const label = flatLabel(flat);
+        const emails = (flat.residentEmails ?? []).filter((e): e is string => Boolean(e));
+        if (!emails.length) results.push({ flatId, flat: label, status: "skipped", sentTo: [], reason: "No resident email on file" });
+        else if (flat.accessCodeHash && !replaceExisting) results.push({ flatId, flat: label, status: "skipped", sentTo: [], reason: "Already has access" });
+        else {
+          const code = generateAccessCode();
+          Object.assign(flat, { accessCodeHash: await hashAccessCode(code), accessIssuedAt: now() });
+          const base = origin.replace(/\/$/, "");
+          const mail = accessEmail({ societyName: society.name, flat: label, code, link: residentLink(base, code), portalUrl: `${base}/resident/` });
+          preview ??= { to: emails.join(", "), subject: mail.subject, text: mail.text };
+          results.push({ flatId, flat: label, status: "sent", sentTo: emails });
+        }
+      }
+      persist();
+      // the offline demo can't send email: it shows what residents would receive instead
+      return ok({ results, simulated: true, preview });
     },
     revokeResidentAccess: async ({ flatId }: { flatId: string }) => {
       ensure();

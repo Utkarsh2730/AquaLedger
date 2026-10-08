@@ -38,6 +38,7 @@ variables** for the live app, then redeploy.
 | `AQUALEDGER_CHAT_MODEL` | `anthropic.claude-sonnet-5-5` | Model for "Ask your water data". `off` = free rule-based answers |
 | `AQUALEDGER_INSIGHT_MODEL` | `anthropic.claude-haiku-5-5` | Model for the monthly summary. `off` = free rule-based summary |
 | `AQUALEDGER_BEDROCK_REGION` | `us-east-1` | Region the Bedrock calls go to |
+| `AQUALEDGER_SENDER_EMAIL` | (unset) | Turns on **emailing residents their login** (Amazon SES) from this address. See section 4 |
 | `AQUALEDGER_BUDGET_EMAIL` | (unset) | If set, creates a monthly AWS Budget that emails you at 80% and 100% |
 | `AQUALEDGER_BUDGET_USD` | `10` | Budget amount in USD |
 
@@ -64,7 +65,31 @@ Until then the app uses the free rule-based answers and the System check tells y
 Cost: the model only sees a compact summary of your data (~1-2k tokens). A chat answer costs well
 under ₹1; the monthly summary is written once a month per society.
 
-## 4. Checking the live backend
+## 4. Emailing residents their login (Amazon SES)
+
+Committee members sign in with email and password. Residents don't have accounts: on **Flats → Email
+residents their login**, the committee pastes or uploads its resident list (`A-101, rahul@gmail.com`).
+AquaLedger then emails every flat its login, which is the flat number plus a private access code,
+with a one-tap link. To switch this on:
+
+1. Pick the address emails come from, for example your society's Gmail, and deploy with it:
+   ```bash
+   export AQUALEDGER_SENDER_EMAIL=greenmeadows.committee@gmail.com
+   npx ampx sandbox
+   ```
+2. AWS emails that address a verification link ("Amazon Web Services – Email Address Verification
+   Request"). Click it.
+3. New AWS accounts start in the **SES sandbox**, which only delivers to verified addresses (fine for
+   testing with your own emails). To email real residents, open **Amazon SES → Account dashboard →
+   Request production access** in the same region as the app. Choose *Transactional*, and describe
+   it as "login emails to residents of housing societies, sent by their committee". Approval
+   usually takes about a day.
+4. **Settings → System check** shows which of these steps is still missing.
+
+Cost: SES includes 3,000 emails a month free for the first 12 months, then $0.10 per 1,000. Until
+SES is set up, the committee can still share each flat's code by link or WhatsApp (**Give access**).
+
+## 5. Checking the live backend
 
 **Settings → System check** tests, from inside your AWS account:
 
@@ -73,6 +98,7 @@ under ₹1; the monthly summary is written once a month per society.
 | Database | flats exist and readings arrived in the last 7 days |
 | Nightly leak scan | the scheduled job ran in the last 26 h (it runs at 01:15 IST) |
 | Alert emails | every admin has confirmed the AWS subscription email |
+| Resident access emails | the sender address is verified and SES is out of the sandbox (warns while not set up) |
 | Smart-meter endpoint | the public meter URL is reachable and rejects a wrong device token |
 | AI answers / summaries | Bedrock answers a test prompt with the configured model and region |
 

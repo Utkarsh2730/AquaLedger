@@ -21,7 +21,7 @@ Built on a fully serverless AWS Amplify Gen 2 backend that fits the **AWS free t
 | Intelligence | Nightly scan, monthly billing (EventBridge schedule) | `amplify/functions/analysis` |
 | Intelligence | Monthly summary + "Ask your water data" chat (rule-based free; Claude on Bedrock optional) | `/insights` |
 | Extras | Live leak demo: virtual meter in the browser or `scripts/meter_simulator.py` | `/live`, `meter-ingest` Lambda |
-| Extras | Resident portal: open with the flat's access code (no account); own usage vs building average, own bills | `/resident` |
+| Extras | Resident portal: open with the flat's access code (no account), which the committee emails to every resident from its own list; own usage vs building average, own bills | `/resident` |
 | Extras | Landing page with pricing tiers | `/` |
 
 ## Architecture
@@ -32,7 +32,7 @@ Next.js (static export, Amplify Hosting)
    ▼
 AppSync GraphQL ──► DynamoDB (Society, Flat, Reading, TankerDelivery, SourceSupply, Bill, Alert, Insight)
    │ custom queries/mutations
-   ├─► admin-ops   Lambda: setupSociety, seedDemoData, issue/revokeResidentAccess, importReadingsCsv
+   ├─► admin-ops   Lambda: setupSociety, seedDemoData, issue/revoke/emailResidentAccess (SES), importReadingsCsv
    ├─► query-api   Lambda: getDashboard, getFlatDetail, askWaterData, residentPortal(code) ──► (Bedrock, optional)
    └─► analysis    Lambda: runAnalysis (leaks / billing / insights) ◄── EventBridge nightly schedule
                                                     └──► SNS topic ──► admin emails

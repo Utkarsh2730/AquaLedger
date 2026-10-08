@@ -4,6 +4,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as budgets from "aws-cdk-lib/aws-budgets";
+import * as ses from "aws-cdk-lib/aws-ses";
 import { auth } from "./auth/resource";
 import { data } from "./data/resource";
 import { adminOps } from "./functions/admin-ops/resource";
@@ -71,6 +72,24 @@ fns.adminOps.addToRolePolicy(new iam.PolicyStatement({ actions: ["sns:Subscribe"
 // System check: see whether admins have confirmed their alert-email subscriptions
 fns.queryApi.addToRolePolicy(new iam.PolicyStatement({ actions: ["sns:ListSubscriptionsByTopic"], resources: [alertsTopic.topicArn] }));
 
+// Resident access emails (Amazon SES), switched on by AQUALEDGER_SENDER_EMAIL: deploying sends that
+// address a verification link from AWS. New SES accounts start in a sandbox that only delivers to
+// verified addresses; the System check says when to request production access.
+const senderEmail = process.env.AQUALEDGER_SENDER_EMAIL?.trim().toLowerCase();
+if (senderEmail) {
+  new ses.EmailIdentity(dataStack, "ResidentEmailSender", { identity: ses.Identity.email(senderEmail) });
+  fns.adminOps.addEnvironment("SENDER_EMAIL", senderEmail);
+  fns.queryApi.addEnvironment("SENDER_EMAIL", senderEmail);
+  fns.adminOps.addToRolePolicy(
+    new iam.PolicyStatement({
+      actions: ["ses:SendEmail"],
+      resources: ["*"],
+      conditions: { StringEquals: { "ses:FromAddress": senderEmail } },
+    })
+  );
+  fns.queryApi.addToRolePolicy(new iam.PolicyStatement({ actions: ["ses:GetAccount", "ses:GetEmailIdentity"], resources: ["*"] }));
+}
+
 // Optional Bedrock access. Unused (and free) unless INSIGHT_MODEL_ID / CHAT_MODEL_ID are set.
 for (const fn of [fns.analysis, fns.queryApi]) {
   fn.addToRolePolicy(
@@ -121,5 +140,6 @@ backend.addOutput({
   custom: {
     meterIngestUrl: ingestUrl.url,
     alertsTopicArn: alertsTopic.topicArn,
+    residentEmailEnabled: Boolean(senderEmail),
   },
 });

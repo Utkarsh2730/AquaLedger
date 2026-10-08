@@ -18,6 +18,7 @@ vi.mock("@anthropic-ai/bedrock-sdk", () => ({
 import { ddb } from "./shared/db";
 import { cognito } from "./shared/identity";
 import { sns } from "./shared/notify";
+import { ses } from "./shared/mail";
 import { handler as adminOps } from "./admin-ops/handler";
 import { handler as analysis } from "./analysis/handler";
 import { handler as queryApi } from "./query-api/handler";
@@ -47,7 +48,7 @@ function fakeSend(cmd: any): any {
       tbl(i.TableName).set(i.Item[pk(i.TableName)], structuredClone(i.Item));
       return {};
     case "GetCommand":
-      return { Item: tbl(i.TableName).get(Object.values(i.Key)[0] as string) };
+      return { Item: structuredClone(tbl(i.TableName).get(Object.values(i.Key)[0] as string)) };
     case "UpdateCommand": {
       const item = tbl(i.TableName).get(Object.values(i.Key)[0] as string);
       if (item) {
@@ -106,6 +107,69 @@ beforeEach(() => {
   vi.spyOn(cognito, "send").mockImplementation(async (cmd: any) => {
     cognitoCalls.push(cmd.constructor.name);
     return {};
+  });
+});
+
+describe("emailing residents their access", () => {
+  it("sends each listed flat a fresh code, skips or restores as it should", async () => {
+    const created: any = await adminOps(appsync("setupSociety", { name: "Green <Meadows>", blocks: ["a"], flatsPerBlock: 4 }));
+    const sid = created.societyId;
+    const admin = [sid, "ADMINS"];
+    const flat = (n: string) => [...tbl("FLAT-table").values()].find((f) => `${f.block}-${f.number}` === n);
+    const [f1, f2, f3, f4] = ["A-101", "A-102", "A-201", "A-202"].map(flat);
+    f1.residentEmails = ["rahul@example.com", "priya@example.com"];
+    f2.residentEmails = ["bounce@example.com"];
+    f4.residentEmails = ["old@example.com"];
+    const before = (await adminOps(appsync("issueResidentAccess", { societyId: sid, flatId: f2.id }, admin))) as any;
+    await adminOps(appsync("issueResidentAccess", { societyId: sid, flatId: f4.id }, admin));
+    const f2Hash = tbl("FLAT-table").get(f2.id).accessCodeHash;
+
+    const args = { societyId: sid, flatIds: [f1.id, f2.id, f3.id, f4.id], origin: "https://aqua.example/" };
+    delete process.env.SENDER_EMAIL;
+    await expect(adminOps(appsync("emailResidentAccess", args, admin))).rejects.toThrow(/AQUALEDGER_SENDER_EMAIL/);
+    process.env.SENDER_EMAIL = "committee@aqua.example";
+
+    const sent: { to: string; subject: string; text: string }[] = [];
+    vi.spyOn(ses, "send").mockImplementation(async (cmd: any) => {
+      const to = cmd.input.Destination.ToAddresses[0];
+      if (to.startsWith("bounce")) throw Object.assign(new Error(`Email address is not verified. The following identities failed the check in region AP-SOUTH-1: ${to}`), { name: "MessageRejected" });
+      sent.push({ to, subject: cmd.input.Content.Simple.Subject.Data, text: cmd.input.Content.Simple.Body.Text.Data });
+      return {};
+    });
+    try {
+      await expect(adminOps(appsync("emailResidentAccess", args, ["other"]))).rejects.toThrow(/Unauthorized/);
+      await expect(adminOps(appsync("emailResidentAccess", { ...args, origin: "javascript:alert(1)" }, admin))).rejects.toThrow(/Invalid site/);
+
+      // f2 already has access but replaceExisting forces a new code, whose send then fails
+      const res: any = await adminOps(appsync("emailResidentAccess", { ...args, replaceExisting: true }, admin));
+      const by = Object.fromEntries(res.results.map((r: any) => [r.flat, r]));
+      expect(by["A-101"]).toMatchObject({ status: "sent", sentTo: ["rahul@example.com", "priya@example.com"] });
+      expect(by["A-102"].status).toBe("failed");
+      expect(by["A-102"].reason).toMatch(/sandbox/);
+      expect(by["A-201"]).toMatchObject({ status: "skipped", reason: "No resident email on file" });
+      expect(by["A-202"].status).toBe("sent");
+      // a failed send keeps the old code working
+      expect(tbl("FLAT-table").get(f2.id).accessCodeHash).toBe(f2Hash);
+      const portal: any = await queryApi({ typeName: "Query", fieldName: "residentPortal", arguments: { code: before.code }, identity: null } as any);
+      expect(portal.flat.label).toBe("A-102");
+
+      // the email carries a working code for that flat, and both residents got the same one
+      const mail = sent.find((m) => m.to === "rahul@example.com")!;
+      expect(mail.subject).toBe("Your AquaLedger login for flat A-101 · Green <Meadows>");
+      const code = mail.text.match(/Access code:\s+(\S+)/)![1];
+      expect(sent.find((m) => m.to === "priya@example.com")!.text).toContain(code);
+      expect(mail.text).toContain(`https://aqua.example/resident/?code=${code}`);
+      const opened: any = await queryApi({ typeName: "Query", fieldName: "residentPortal", arguments: { code }, identity: null } as any);
+      expect(opened.flat.label).toBe("A-101");
+
+      // without replaceExisting, flats that have access are left alone
+      sent.length = 0;
+      const again: any = await adminOps(appsync("emailResidentAccess", args, admin));
+      expect(again.results.filter((r: any) => r.status === "skipped" && r.reason === "Already has access").map((r: any) => r.flat)).toEqual(["A-101", "A-102", "A-202"]);
+      expect(sent).toHaveLength(0);
+    } finally {
+      delete process.env.SENDER_EMAIL;
+    }
   });
 });
 

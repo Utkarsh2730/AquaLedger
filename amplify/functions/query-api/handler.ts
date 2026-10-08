@@ -5,6 +5,7 @@ import { hashAccessCode, isWellFormedAccessCode } from "../../../lib/core/access
 import { findFlatByAccessHash, getSociety, listFlats, listReadings, loadSocietyData, queryAll, T } from "../shared/db";
 import { assertSocietyAdmin, type ResolverEvent } from "../shared/identity";
 import { aiEnabled, askModel, pingModel } from "../shared/ai";
+import { mailStatus } from "../shared/mail";
 import { subscriptionStatus } from "../shared/notify";
 
 type Args = Record<string, any>;
@@ -165,6 +166,27 @@ async function systemCheck(societyId: string) {
           ? "Open the “AWS Notification - Subscription Confirmation” email and click Confirm subscription (check spam)."
           : "Invite them again as an admin from Settings to subscribe their email.",
       };
+    }),
+
+    check("resident-email", "Resident access emails", async () => {
+      const sender = process.env.SENDER_EMAIL;
+      if (!sender) {
+        return {
+          status: "warn",
+          detail: "Not set up: share access codes by link or WhatsApp instead.",
+          fix: "Set AQUALEDGER_SENDER_EMAIL to an address you own, redeploy, then click the verification link Amazon SES emails to it.",
+        };
+      }
+      const m = await mailStatus();
+      if (!m.verified) return { status: "fail", detail: `${sender} isn't verified yet.`, fix: `Open the “Amazon Web Services – Email Address Verification Request” email sent to ${sender} and click the link (check spam).` };
+      if (!m.production) {
+        return {
+          status: "warn",
+          detail: `Sending from ${sender}, but Amazon SES is in sandbox mode: it only delivers to verified addresses (max ${m.max24h ?? 200} a day).`,
+          fix: "In the AWS console open Amazon SES → Account dashboard → Request production access (say: transactional login emails to residents of housing societies who were registered by their committee). Approval usually takes a day.",
+        };
+      }
+      return { status: "pass", detail: `Sending from ${sender}; ${m.sent24h ?? 0} of ${m.max24h ?? "?"} emails used in the last 24 h.` };
     }),
 
     check("meter", "Smart-meter endpoint", async () => {

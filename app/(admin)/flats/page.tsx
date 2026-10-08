@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { client, flatLabelOf, fmtDate, loadFlats, type FlatModel } from "@/lib/client";
 import ResidentAccess from "@/components/ResidentAccess";
+import ResidentEmails from "@/components/ResidentEmails";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, Empty, ErrorBox, Input, PageHeader, Spinner, Table, Td } from "@/components/ui";
 
@@ -90,6 +91,7 @@ export default function FlatsPage() {
           </Button>
         </form>
       </Card>
+      <ResidentEmails societyId={societyId} flats={flats} onChanged={() => loadFlats(societyId).then(setFlats)} />
       <Card action={<Input placeholder="Search flats" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />}>
         {shown.length === 0 ? (
           <Empty>No flats match.</Empty>
@@ -103,7 +105,14 @@ export default function FlatsPage() {
                   </Link>
                 </Td>
                 <Td>{f.occupants ?? "—"}</Td>
-                <Td>{f.accessIssuedAt ? <Badge tone="good">Active since {fmtDate(f.accessIssuedAt.slice(0, 10))}</Badge> : <span className="text-slate-400">Not given</span>}</Td>
+                <Td>
+                  {f.accessIssuedAt ? <Badge tone="good">Active since {fmtDate(f.accessIssuedAt.slice(0, 10))}</Badge> : <span className="text-slate-400">Not given</span>}
+                  {(f.residentEmails ?? []).filter(Boolean).length > 0 && (
+                    <div className="mt-0.5 text-xs text-slate-500" title={(f.residentEmails ?? []).join(", ")}>
+                      ✉ {(f.residentEmails ?? []).filter(Boolean).length} email{(f.residentEmails ?? []).filter(Boolean).length === 1 ? "" : "s"}
+                    </div>
+                  )}
+                </Td>
                 <Td className="text-right">
                   <div className="flex justify-end gap-1">
                     <Button variant="secondary" onClick={() => setAccessFor(f)}>

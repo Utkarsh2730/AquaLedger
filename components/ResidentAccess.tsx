@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { client, flatLabelOf, fmtDateTime, unwrap, type FlatModel } from "@/lib/client";
+import { client, DEMO, flatLabelOf, fmtDateTime, residentEmailEnabled, unwrap, type EmailAccessResult, type FlatModel } from "@/lib/client";
 import { residentLink } from "@/lib/core/access";
+import { parseEmailList } from "@/lib/core/residents";
 import { Button, ErrorBox } from "./ui";
 
 /**
@@ -17,6 +18,49 @@ export default function ResidentAccess({ societyId, flat, onClose, onChanged }: 
   const [copied, setCopied] = useState<string | null>(null);
   const label = flatLabelOf(flat);
   const active = Boolean(flat.accessIssuedAt);
+  const savedEmails = (flat.residentEmails ?? []).filter(Boolean) as string[];
+  const [emailText, setEmailText] = useState(savedEmails.join(", "));
+  const [emailMsg, setEmailMsg] = useState<string | null>(null);
+  const typed = parseEmailList(emailText);
+  const emailsChanged = typed.emails.join(",") !== savedEmails.join(",");
+
+  async function saveEmails() {
+    if (typed.bad.length) return setError(new Error(`Not valid emails: ${typed.bad.join(", ")}`));
+    setBusy(true);
+    setError(null);
+    setEmailMsg(null);
+    try {
+      unwrap(await client.models.Flat.update({ id: flat.id, residentEmails: typed.emails }));
+      setEmailText(typed.emails.join(", "));
+      setEmailMsg("Emails saved.");
+      onChanged();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function emailCode() {
+    if (active && !confirm(`Email ${label} a new code? The current code stops working immediately.`)) return;
+    setBusy(true);
+    setError(null);
+    setEmailMsg(null);
+    try {
+      const res = unwrap<{ results: EmailAccessResult[] }>(
+        await client.mutations.emailResidentAccess({ societyId, flatIds: [flat.id], origin: window.location.origin, replaceExisting: true })
+      );
+      const r = res.results[0];
+      if (r.status !== "sent") throw new Error(r.reason ?? "Not sent");
+      setCode(null);
+      setEmailMsg(`${DEMO ? "Demo: would have emailed" : "Emailed"} a new code to ${r.sentTo.join(", ")}.${r.reason ? ` ${r.reason}` : ""}`);
+      onChanged();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -106,6 +150,29 @@ export default function ResidentAccess({ societyId, flat, onClose, onChanged }: 
             Give the residents of {label} a private code. With it they see this flat&apos;s water use, bills and leak alerts, and nothing else. No account or password needed.
           </p>
         )}
+        <div className="space-y-2 rounded-xl bg-slate-50 p-3">
+          <label htmlFor="flat-emails" className="block text-xs font-medium text-slate-700">
+            Resident emails
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="flat-emails"
+              value={emailText}
+              onChange={(e) => setEmailText(e.target.value)}
+              placeholder="owner@example.com, tenant@example.com"
+              className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500"
+            />
+            <Button variant="secondary" onClick={saveEmails} disabled={busy || !emailsChanged}>
+              Save
+            </Button>
+          </div>
+          {savedEmails.length > 0 && residentEmailEnabled && (
+            <Button onClick={emailCode} disabled={busy || emailsChanged} className="w-full bg-emerald-600 hover:bg-emerald-700">
+              ✉ Email {active || code ? "a new code" : "the login"} to {savedEmails.length === 1 ? savedEmails[0] : `${savedEmails.length} residents`}
+            </Button>
+          )}
+          {emailMsg && <p className="text-xs text-emerald-700">{emailMsg}</p>}
+        </div>
         <div className="flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-4">
           <div className="flex gap-2">
             <Button onClick={issue} disabled={busy} className="bg-emerald-600 hover:bg-emerald-700">

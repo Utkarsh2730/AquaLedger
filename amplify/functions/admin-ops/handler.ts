@@ -8,11 +8,13 @@ import {
 import { BatchWriteCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { generateFlats, generateSeed } from "../../../lib/core/seed";
 import { parseReadingsCsv } from "../../../lib/core/csv";
-import { generateAccessCode, hashAccessCode } from "../../../lib/core/access";
+import { generateAccessCode, hashAccessCode, residentLink } from "../../../lib/core/access";
 import type { FlatRec } from "../../../lib/core/types";
 import { batchPut, ddb, getSociety, listFlats, putItem, queryAll, T, setFlatAccess, type SocietyRec } from "../shared/db";
 import { assertSocietyAdmin, cognito, emailOf, usernameOf, type ResolverEvent } from "../shared/identity";
 import { subscribeAdminEmail } from "../shared/notify";
+import { explainSendError, sendEmail, senderEmail } from "../shared/mail";
+import { accessEmail, EMAIL_BATCH } from "../../../lib/core/residents";
 
 type Args = Record<string, any>;
 const USER_POOL_ID = () => process.env.USER_POOL_ID!;
@@ -28,6 +30,9 @@ export const handler = async (event: ResolverEvent<Args>) => {
     case "issueResidentAccess":
       assertSocietyAdmin(event.identity, a.societyId);
       return issueResidentAccess(a.societyId, a.flatId);
+    case "emailResidentAccess":
+      assertSocietyAdmin(event.identity, a.societyId);
+      return emailResidentAccess(a.societyId, a.flatIds ?? [], String(a.origin ?? ""), Boolean(a.replaceExisting));
     case "revokeResidentAccess":
       assertSocietyAdmin(event.identity, a.societyId);
       return revokeResidentAccess(a.societyId, a.flatId);
@@ -195,6 +200,70 @@ async function revokeResidentAccess(societyId: string, flatId: string) {
   const flat = await flatInSociety(societyId, flatId);
   await setFlatAccess(flatId, null);
   return { ok: true, flat: `${flat.block}-${flat.number}` };
+}
+
+type EmailResult = { flatId: string; flat: string; status: "sent" | "skipped" | "failed"; sentTo: string[]; reason?: string };
+
+/**
+ * Emails each flat's residents a fresh access code: their login is the flat number plus the code.
+ * The code is stored only as a hash, so sending means issuing a new one; flats that already have
+ * access are skipped unless replaceExisting is set. If no email could be sent, the flat's previous
+ * access is put back, so a failed send never locks residents out.
+ */
+async function emailResidentAccess(societyId: string, flatIds: string[], origin: string, replaceExisting: boolean) {
+  if (!senderEmail()) {
+    throw new Error("Email sending isn't set up yet: set AQUALEDGER_SENDER_EMAIL, redeploy, and confirm the email from Amazon SES. See Settings → System check.");
+  }
+  if (!/^https?:\/\/[^\s/]+$/.test(origin.replace(/\/$/, ""))) throw new Error("Invalid site address");
+  if (flatIds.length > EMAIL_BATCH) throw new Error(`Send at most ${EMAIL_BATCH} flats per request`);
+  const society = await getSociety(societyId);
+  if (!society) throw new Error("Society not found");
+  const base = origin.replace(/\/$/, "");
+
+  const results: EmailResult[] = [];
+  for (const flatId of flatIds) {
+    let flat: FlatRec;
+    try {
+      flat = await flatInSociety(societyId, flatId);
+    } catch (err) {
+      results.push({ flatId, flat: "?", status: "failed", sentTo: [], reason: (err as Error).message });
+      continue;
+    }
+    const label = `${flat.block}-${flat.number}`;
+    const emails = (flat.residentEmails ?? []).filter((e): e is string => Boolean(e));
+    if (!emails.length) {
+      results.push({ flatId, flat: label, status: "skipped", sentTo: [], reason: "No resident email on file" });
+      continue;
+    }
+    if (flat.accessCodeHash && !replaceExisting) {
+      results.push({ flatId, flat: label, status: "skipped", sentTo: [], reason: "Already has access" });
+      continue;
+    }
+
+    const previous = { hash: flat.accessCodeHash ?? null, at: flat.accessIssuedAt ?? undefined };
+    const code = generateAccessCode();
+    await setFlatAccess(flatId, await hashAccessCode(code));
+    const mail = accessEmail({ societyName: society.name, flat: label, code, link: residentLink(base, code), portalUrl: `${base}/resident/` });
+    const sentTo: string[] = [];
+    const errors: string[] = [];
+    for (const to of emails) {
+      try {
+        await sendEmail(to, mail);
+        sentTo.push(to);
+      } catch (err) {
+        console.error("SES send failed", to, err);
+        errors.push(`${to}: ${explainSendError(err)}`);
+      }
+    }
+    if (!sentTo.length) {
+      // nobody received the new code: keep the old one working
+      await setFlatAccess(flatId, previous.hash, previous.at);
+      results.push({ flatId, flat: label, status: "failed", sentTo, reason: errors.join(" · ") });
+    } else {
+      results.push({ flatId, flat: label, status: "sent", sentTo, ...(errors.length ? { reason: `Not delivered to ${errors.join(" · ")}` } : {}) });
+    }
+  }
+  return { results };
 }
 
 async function importCsv(societyId: string, csv: string) {

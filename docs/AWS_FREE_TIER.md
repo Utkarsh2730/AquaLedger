@@ -18,6 +18,7 @@ cent at hackathon scale.** Nothing is always-on, and nothing bills by the hour.
 | AppSync | GraphQL API between app and data | Credits / 12-month free tier (250k ops) | A few thousand operations |
 | EventBridge Scheduler | Nightly leak scan, monthly billing (1 schedule) | Always free: 14M invocations / month | 31 invocations |
 | SNS | Leak + bill emails, filtered per society | Always free: 1M publishes, 1,000 email deliveries / month | Tens of emails |
+| SES (optional) | Emails residents their login (flat + access code) | 3,000 messages / month for the first 12 months, then $0.10 per 1,000 | One email per resident when the committee sends logins. Off unless `AQUALEDGER_SENDER_EMAIL` is set |
 | Lambda Function URL | Smart-meter ingest endpoint | No charge beyond Lambda | — |
 | Amplify Hosting | Static Next.js export + CI/CD | Credits / 12-month free tier (1,000 build min, 15 GB served) | A few builds |
 | CloudWatch Logs | Lambda logs | Always free: 5 GB ingest | Well under 1 GB |
@@ -30,7 +31,7 @@ cent at hackathon scale.** Nothing is always-on, and nothing bills by the hour.
 | --- | --- | --- |
 | S3 CSV upload → Lambda parser | CSV sent straight to the `importReadingsCsv` mutation, parsed in Lambda | No bucket, no trigger, no IAM to debug; the admin auth check happens in the same call. (This is also the roadmap's own cut line.) |
 | Bill PDFs rendered in Lambda, stored in S3 | Printable bill page; "Download PDF" uses the browser's print-to-PDF | No PDF library, no storage. Also a roadmap cut line. |
-| SES emails | SNS email subscriptions with a `societyId` filter policy | SES starts in sandbox (verified recipients only) and is not always-free; SNS email is. Admins confirm one AWS email at sign-up. |
+| SES emails | Alerts and bills: SNS email subscriptions with a `societyId` filter policy. SES only for resident login emails (optional) | SES starts in sandbox (verified recipients only) and is not always-free; SNS email is. Admins confirm one AWS email at sign-up. Residents can't confirm an SNS subscription before they have their login, so that one email uses SES. |
 | SNS SMS | Email only | SMS is billed per message in every region. |
 | IoT Core MQTT + rule | Lambda Function URL + device token header (Python simulator *and* an in-browser virtual meter) | Same live demo, no certificates or IoT policies. The roadmap's cut line says it "looks identical in the demo". A request with a wrong token is rejected before anything is written. |
 | Bedrock always on | Claude on Bedrock when model access is granted, with automatic fallback to free rule-based answers; `off` switches it off entirely | Bedrock is the only service with a real per-call cost, and the demo must never break. |
