@@ -70,18 +70,27 @@ export default function Landing() {
     <div className="bg-white text-slate-900">
       {/* nav */}
       <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-brand-700">
-            <DropIcon className="h-6 w-6 fill-cyan-500 stroke-cyan-600" /> AquaLedger
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-3 sm:px-4 md:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-1.5 text-base font-semibold text-brand-700 sm:gap-2 sm:text-lg">
+            <DropIcon className="h-6 w-6 fill-cyan-500 stroke-cyan-600" />
+            <span className="max-[379px]:sr-only">AquaLedger</span>
           </Link>
           <nav className="flex items-center gap-1 text-sm sm:gap-4">
             <TourVideo />
-            <a href="#how" className="hidden px-2 text-slate-600 hover:text-slate-900 md:block">How it works</a>
-            <a href="#features" className="hidden px-2 text-slate-600 hover:text-slate-900 md:block">Features</a>
-            <a href="#pricing" className="hidden px-2 text-slate-600 hover:text-slate-900 sm:block">Pricing</a>
-            <Link href="/resident" className="hidden px-2 text-slate-600 hover:text-slate-900 sm:block">Residents</Link>
-            <Link href="/login" className="whitespace-nowrap rounded-lg bg-brand-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-brand-700">
-              <span className="sm:hidden">Log in</span>
+            <a href="#how" className="hidden px-2 text-slate-600 hover:text-slate-900 lg:block">How it works</a>
+            <a href="#features" className="hidden px-2 text-slate-600 hover:text-slate-900 lg:block">Features</a>
+            <a href="#pricing" className="hidden px-2 text-slate-600 hover:text-slate-900 lg:block">Pricing</a>
+            {/* two doors, two colours: green for residents (matches the resident portal), cyan for the committee */}
+            <Link
+              href="/resident"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-600 bg-emerald-50 px-2.5 py-2 font-medium text-emerald-800 hover:bg-emerald-100 sm:px-4"
+            >
+              <HomeIcon className="h-4 w-4" />
+              <span className="sm:hidden">Resident</span>
+              <span className="hidden sm:inline">Resident login</span>
+            </Link>
+            <Link href="/login" className="whitespace-nowrap rounded-lg bg-brand-600 px-2.5 py-2 font-medium text-white shadow-sm hover:bg-brand-700 sm:px-4">
+              <span className="sm:hidden">Committee</span>
               <span className="hidden sm:inline">Committee login</span>
             </Link>
           </nav>
@@ -156,7 +165,7 @@ export default function Landing() {
               ["Seconds", "from an open tap to a live alert, then an email to the committee"],
             ].map(([n, l]) => (
               <div key={n}>
-                <div className="bg-gradient-to-b from-cyan-200 to-cyan-400 bg-clip-text text-4xl font-semibold text-transparent md:text-5xl">{n}</div>
+                <div className="bg-gradient-to-b from-cyan-200 to-cyan-400 bg-clip-text text-4xl font-semibold text-transparent lg:text-5xl">{n}</div>
                 <p className="mx-auto mt-2 max-w-[14rem] text-sm text-slate-400">{l}</p>
               </div>
             ))}
