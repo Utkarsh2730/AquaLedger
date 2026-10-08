@@ -34,10 +34,10 @@ export function unwrap<T>(res: { data?: unknown; errors?: { message: string }[] 
   return parseJson<T>(res.data);
 }
 
-const STATIC_GROUPS = new Set(["ADMINS", "RESIDENTS"]);
+const STATIC_GROUPS = new Set(["ADMINS"]);
 
 export async function getRoles(forceRefresh = false) {
-  if (DEMO) return { groups: [DEMO_SOCIETY_ID, "ADMINS"], societyIds: [DEMO_SOCIETY_ID], isAdmin: true, isResident: false };
+  if (DEMO) return { groups: [DEMO_SOCIETY_ID, "ADMINS"], societyIds: [DEMO_SOCIETY_ID], isAdmin: true };
   const session = await fetchAuthSession({ forceRefresh });
   const raw = session.tokens?.accessToken.payload["cognito:groups"];
   const groups = Array.isArray(raw) ? (raw as string[]) : [];
@@ -45,7 +45,6 @@ export async function getRoles(forceRefresh = false) {
     groups,
     societyIds: groups.filter((g) => !STATIC_GROUPS.has(g)),
     isAdmin: groups.includes("ADMINS"),
-    isResident: groups.includes("RESIDENTS"),
   };
 }
 

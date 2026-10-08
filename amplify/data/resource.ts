@@ -6,8 +6,8 @@ import { queryApi } from "../functions/query-api/resource";
 /**
  * Multi-tenancy: every record carries societyId, and `allow.groupDefinedIn("societyId")`
  * lets only members of the Cognito group with that exact name (the society's admins) read or
- * write it. Residents never query these tables directly; they go through the
- * `myResidentPortal` query, which scopes everything to their own flat server-side.
+ * write it. Residents never query these tables directly: the committee gives each flat an access
+ * code, and the `residentPortal` query returns that one flat's view server-side.
  */
 
 
@@ -43,11 +43,13 @@ const schema = a
         block: a.string().required(),
         number: a.string().required(),
         occupants: a.integer(),
-        residentEmail: a.email(),
+        /** SHA-256 of the flat's resident access code (never the code itself); absent = no access issued */
+        accessCodeHash: a.string(),
+        accessIssuedAt: a.datetime(),
       })
       .secondaryIndexes((index) => [
         index("societyId").name("bySociety").queryField("listFlatsBySociety"),
-        index("residentEmail").name("byResidentEmail").queryField("listFlatsByResidentEmail"),
+        index("accessCodeHash").name("byAccessCode").queryField("listFlatsByAccessCode"),
       ])
       .authorization((allow) => [allow.groupDefinedIn("societyId")]),
 
@@ -156,9 +158,16 @@ const schema = a
       .authorization((allow) => [allow.authenticated()])
       .handler(a.handler.function(adminOps)),
 
-    inviteResident: a
+    issueResidentAccess: a
       .mutation()
-      .arguments({ societyId: a.id().required(), flatId: a.id().required(), email: a.email().required() })
+      .arguments({ societyId: a.id().required(), flatId: a.id().required() })
+      .returns(a.json())
+      .authorization((allow) => [allow.authenticated()])
+      .handler(a.handler.function(adminOps)),
+
+    revokeResidentAccess: a
+      .mutation()
+      .arguments({ societyId: a.id().required(), flatId: a.id().required() })
       .returns(a.json())
       .authorization((allow) => [allow.authenticated()])
       .handler(a.handler.function(adminOps)),
@@ -212,10 +221,12 @@ const schema = a
       .authorization((allow) => [allow.authenticated()])
       .handler(a.handler.function(queryApi)),
 
-    myResidentPortal: a
+    // residents have no account: the access code is the credential (guest = Cognito identity pool)
+    residentPortal: a
       .query()
+      .arguments({ code: a.string().required() })
       .returns(a.json())
-      .authorization((allow) => [allow.authenticated()])
+      .authorization((allow) => [allow.guest(), allow.authenticated()])
       .handler(a.handler.function(queryApi)),
   });
 

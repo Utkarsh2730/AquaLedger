@@ -29,7 +29,7 @@ const ROLE = {
   resident: {
     badge: "Resident portal",
     headline: "Your flat’s water, in plain numbers.",
-    lead: "See what your home uses and what you pay, nothing else.",
+    lead: "No account or password: your committee gives your flat an access code.",
     points: [
       { icon: HomeIcon, text: "Your usage against the building average" },
       { icon: ReceiptIcon, text: "Your monthly bill, explained line by line" },
@@ -38,8 +38,8 @@ const ROLE = {
     panel: "from-emerald-600 via-teal-600 to-teal-800",
     accent: "text-emerald-100",
     badgeTone: "bg-white/15 text-white ring-white/30",
-    title: "Resident sign in",
-    hint: "First time? Use your email and the temporary password from your invitation, then choose your own password.",
+    title: "Open your flat",
+    hint: "Enter the access code your society committee gave you, or just open the link they sent.",
     switchText: "Committee member?",
     switchLink: { href: "/login", label: "Sign in to the committee console" },
     theme: "auth-resident",

@@ -24,7 +24,7 @@ import { handler as queryApi } from "./query-api/handler";
 import { handler as meterIngest } from "./meter-ingest/handler";
 
 const INDEXES: Record<string, Record<string, [string, string?]>> = {
-  "FLAT-table": { bySociety: ["societyId"], byResidentEmail: ["residentEmail"] },
+  "FLAT-table": { bySociety: ["societyId"], byAccessCode: ["accessCodeHash"] },
   "READING-table": { bySocietyTime: ["societyId", "timestamp"], byFlatTime: ["flatId", "timestamp"] },
   "TANKER-table": { bySocietyDate: ["societyId", "date"] },
   "SUPPLY-table": { bySocietyDate: ["societyId", "date"] },
@@ -51,7 +51,10 @@ function fakeSend(cmd: any): any {
     case "UpdateCommand": {
       const item = tbl(i.TableName).get(Object.values(i.Key)[0] as string);
       if (item) {
-        for (const [, attr, val] of (i.UpdateExpression as string).matchAll(/(\w+) = (:\w+)/g)) item[attr] = i.ExpressionAttributeValues[val];
+        const expr = i.UpdateExpression as string;
+        for (const [, attr, val] of expr.matchAll(/(\w+) = (:\w+)/g)) item[attr] = i.ExpressionAttributeValues[val];
+        const removed = expr.match(/REMOVE (.+)$/)?.[1];
+        for (const attr of removed?.split(",").map((a: string) => a.trim()) ?? []) delete item[attr];
       }
       return {};
     }
@@ -146,11 +149,30 @@ describe("end-to-end through the Lambda handlers", () => {
     expect(detail.alerts).toHaveLength(2);
     expect(detail.bills).toHaveLength(1);
 
-    // resident portal: invite then read as the resident
-    await adminOps(appsync("inviteResident", { societyId: sid, flatId: leakFlatId, email: "Resident@Example.com" }, admin));
-    const resident: any = await queryApi({ ...appsync("myResidentPortal", {}), identity: { username: "r", claims: { email: "resident@example.com" } } } as any);
+    // resident access: the committee issues a code; anyone holding it sees that flat only, no account
+    const guest = (code: string) => queryApi({ typeName: "Query", fieldName: "residentPortal", arguments: { code }, identity: { cognitoIdentityId: "ap-south-1:guest" } } as any) as Promise<any>;
+    const issued: any = await adminOps(appsync("issueResidentAccess", { societyId: sid, flatId: leakFlatId }, admin));
+    expect(issued.code).toMatch(/^[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
+    expect(issued.flat).toBe("B-202");
+    const stored = tbl("FLAT-table").get(leakFlatId);
+    expect(stored.accessCodeHash).toMatch(/^[0-9a-f]{64}$/); // only the hash is stored
+    expect(JSON.stringify(stored)).not.toContain(issued.code.replace(/-/g, ""));
+    const resident = await guest(issued.code.toLowerCase().replace(/-/g, " ")); // forgiving input
     expect(resident.flat.label).toBe("B-202");
+    expect(resident.society.name).toBe("Green Meadows");
     expect(resident.bills).toHaveLength(0); // drafts are hidden from residents
+    expect(resident.email).toBeUndefined();
+    await expect(guest("K7M2-QX9P-4HDR")).rejects.toThrow(/not recognised/);
+    await expect(guest("1234")).rejects.toThrow(/doesn't look like an access code/);
+    // other committees can't issue codes for this society's flats
+    await expect(adminOps(appsync("issueResidentAccess", { societyId: sid, flatId: leakFlatId }, ["other"]))).rejects.toThrow(/Unauthorized/);
+    // re-issuing replaces the old code; revoking ends access
+    const second: any = await adminOps(appsync("issueResidentAccess", { societyId: sid, flatId: leakFlatId }, admin));
+    await expect(guest(issued.code)).rejects.toThrow(/not recognised/);
+    expect((await guest(second.code)).flat.label).toBe("B-202");
+    await adminOps(appsync("revokeResidentAccess", { societyId: sid, flatId: leakFlatId }, admin));
+    await expect(guest(second.code)).rejects.toThrow(/not recognised/);
+    expect(tbl("FLAT-table").get(leakFlatId).accessCodeHash).toBeUndefined();
 
     // a second committee member becomes admin of the same society
     cognitoCalls.length = 0;

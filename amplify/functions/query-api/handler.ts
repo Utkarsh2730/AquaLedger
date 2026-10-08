@@ -1,8 +1,9 @@
 import { buildDashboard, buildFlatDetail } from "../../../lib/core/summary";
 import { buildFacts, ruleBasedAnswer } from "../../../lib/core/insights";
-import type { BillRec, FlatRec } from "../../../lib/core/types";
-import { getSociety, listFlats, listReadings, loadSocietyData, queryAll, T } from "../shared/db";
-import { assertSocietyAdmin, emailOf, type ResolverEvent } from "../shared/identity";
+import type { BillRec } from "../../../lib/core/types";
+import { hashAccessCode, isWellFormedAccessCode } from "../../../lib/core/access";
+import { findFlatByAccessHash, getSociety, listFlats, listReadings, loadSocietyData, queryAll, T } from "../shared/db";
+import { assertSocietyAdmin, type ResolverEvent } from "../shared/identity";
 import { aiEnabled, askModel, pingModel } from "../shared/ai";
 import { subscriptionStatus } from "../shared/notify";
 
@@ -23,8 +24,8 @@ export const handler = async (event: ResolverEvent<Args>) => {
     case "systemCheck":
       assertSocietyAdmin(event.identity, a.societyId);
       return systemCheck(a.societyId);
-    case "myResidentPortal":
-      return residentPortal(await emailOf(event.identity));
+    case "residentPortal":
+      return residentPortal(String(a.code ?? ""));
     default:
       throw new Error(`Unknown field ${event.fieldName}`);
   }
@@ -75,20 +76,17 @@ async function askWaterData(societyId: string, question: string) {
   return { answer: ruleBasedAnswer(question, dash, openAlerts), source: "rules", ...(ai.error ? { aiError: ai.error } : {}) };
 }
 
-/** Residents only ever see their own flat plus anonymous building averages. */
-async function residentPortal(email: string) {
-  const flats = await queryAll<FlatRec>({
-    TableName: T.Flat,
-    IndexName: "byResidentEmail",
-    KeyConditionExpression: "residentEmail = :e",
-    ExpressionAttributeValues: { ":e": email },
-  });
-  const flat = flats[0];
-  if (!flat) return { email, flat: null };
+/**
+ * The resident view, for whoever holds the flat's access code: that flat only, plus anonymous
+ * building averages; draft bills stay hidden until the committee issues them.
+ */
+async function residentPortal(rawCode: string) {
+  if (!isWellFormedAccessCode(rawCode)) throw new Error("That doesn't look like an access code. It has 12 letters and numbers, like K7M2-QX9P-4HDR.");
+  const flat = await findFlatByAccessHash(await hashAccessCode(rawCode));
+  if (!flat) throw new Error("Access code not recognised. It may have been replaced: ask your society committee for a new one.");
   const [society, data, bills] = await Promise.all([getSociety(flat.societyId), loadSocietyData(flat.societyId), billsForFlat(flat.id)]);
   const detail = buildFlatDetail(data, flat.id, new Date(), society?.tzOffsetMinutes ?? 330)!;
   return {
-    email,
     society: { name: society?.name, city: society?.city },
     ...detail,
     flat: { label: detail.flat.label, block: flat.block, number: flat.number },

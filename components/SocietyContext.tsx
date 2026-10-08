@@ -35,8 +35,7 @@ export function SocietyProvider({ children }: { children: ReactNode }) {
       const id = roles.societyIds[0] ?? null;
       setSocietyId(id);
       setChecked(true);
-      if (!id && roles.isResident && !roles.isAdmin) router.replace("/resident");
-      else if (!id && !onOnboarding) router.replace("/onboarding");
+      if (!id && !onOnboarding) router.replace("/onboarding");
       else if (id && onOnboarding && !force) router.replace("/dashboard");
     },
     [router, onOnboarding]

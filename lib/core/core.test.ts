@@ -173,3 +173,29 @@ describe("csv import", () => {
     expect(errors).toHaveLength(2);
   });
 });
+
+import { formatAccessCode, generateAccessCode, hashAccessCode, isWellFormedAccessCode, normalizeAccessCode, residentLink } from "./access";
+
+describe("resident access codes", () => {
+  it("generates readable, well-formed, unique codes", () => {
+    const codes = new Set(Array.from({ length: 500 }, () => generateAccessCode()));
+    expect(codes.size).toBe(500);
+    for (const c of codes) {
+      expect(c).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
+      expect(isWellFormedAccessCode(c)).toBe(true);
+    }
+  });
+
+  it("forgives spacing, case and look-alike characters", async () => {
+    expect(normalizeAccessCode(" k7m2 qx9p-4hdr ")).toBe("K7M2QX9P4HDR");
+    expect(normalizeAccessCode("O0Il")).toBe("0011");
+    expect(formatAccessCode("k7m2qx9p4hdr")).toBe("K7M2-QX9P-4HDR");
+    expect(await hashAccessCode("k7m2 qx9p 4hdr")).toBe(await hashAccessCode("K7M2-QX9P-4HDR"));
+    expect(await hashAccessCode("K7M2-QX9P-4HDR")).not.toBe(await hashAccessCode("K7M2-QX9P-4HDS"));
+    expect(isWellFormedAccessCode("K7M2-QX9P")).toBe(false);
+  });
+
+  it("builds the share link", () => {
+    expect(residentLink("https://app.example/", "k7m2qx9p4hdr")).toBe("https://app.example/resident/?code=K7M2-QX9P-4HDR");
+  });
+});

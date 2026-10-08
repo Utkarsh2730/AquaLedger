@@ -8,8 +8,9 @@ import {
 import { BatchWriteCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { generateFlats, generateSeed } from "../../../lib/core/seed";
 import { parseReadingsCsv } from "../../../lib/core/csv";
+import { generateAccessCode, hashAccessCode } from "../../../lib/core/access";
 import type { FlatRec } from "../../../lib/core/types";
-import { batchPut, ddb, getSociety, listFlats, putItem, queryAll, T, updateFlatResident, type SocietyRec } from "../shared/db";
+import { batchPut, ddb, getSociety, listFlats, putItem, queryAll, T, setFlatAccess, type SocietyRec } from "../shared/db";
 import { assertSocietyAdmin, cognito, emailOf, usernameOf, type ResolverEvent } from "../shared/identity";
 import { subscribeAdminEmail } from "../shared/notify";
 
@@ -24,9 +25,12 @@ export const handler = async (event: ResolverEvent<Args>) => {
     case "seedDemoData":
       assertSocietyAdmin(event.identity, a.societyId);
       return seedDemoData(a.societyId);
-    case "inviteResident":
+    case "issueResidentAccess":
       assertSocietyAdmin(event.identity, a.societyId);
-      return inviteResident(a.societyId, a.flatId, a.email);
+      return issueResidentAccess(a.societyId, a.flatId);
+    case "revokeResidentAccess":
+      assertSocietyAdmin(event.identity, a.societyId);
+      return revokeResidentAccess(a.societyId, a.flatId);
     case "inviteAdmin":
       assertSocietyAdmin(event.identity, a.societyId);
       return inviteAdmin(a.societyId, a.email);
@@ -169,14 +173,28 @@ async function inviteAdmin(societyId: string, rawEmail: string) {
   return { ok: true, invited, email, adminEmails };
 }
 
-async function inviteResident(societyId: string, flatId: string, rawEmail: string) {
-  const email = rawEmail.trim().toLowerCase();
+async function flatInSociety(societyId: string, flatId: string) {
   const flat = (await ddb.send(new GetCommand({ TableName: T.Flat, Key: { id: flatId } }))).Item as FlatRec | undefined;
   if (!flat || flat.societyId !== societyId) throw new Error("Flat not found in this society");
-  const invited = await ensureUser(email);
-  await addToGroup(email, "RESIDENTS");
-  await updateFlatResident(flatId, email);
-  return { ok: true, invited, email, flat: `${flat.block}-${flat.number}` };
+  return flat;
+}
+
+/**
+ * Gives a flat's residents access: a fresh code (returned once, never stored) replaces any
+ * previous one, so issuing again is also how the committee revokes a lost or old code.
+ */
+async function issueResidentAccess(societyId: string, flatId: string) {
+  const flat = await flatInSociety(societyId, flatId);
+  const code = generateAccessCode();
+  const issuedAt = new Date().toISOString();
+  await setFlatAccess(flatId, await hashAccessCode(code), issuedAt);
+  return { code, flat: `${flat.block}-${flat.number}`, issuedAt };
+}
+
+async function revokeResidentAccess(societyId: string, flatId: string) {
+  const flat = await flatInSociety(societyId, flatId);
+  await setFlatAccess(flatId, null);
+  return { ok: true, flat: `${flat.block}-${flat.number}` };
 }
 
 async function importCsv(societyId: string, csv: string) {

@@ -14,11 +14,15 @@ import { ruleBasedAnswer, ruleBasedSummary } from "@/lib/core/insights";
 import { parseReadingsCsv } from "@/lib/core/csv";
 import { detectLiveSpike } from "@/lib/core/leak";
 import { addMonths, localMonth } from "@/lib/core/time";
+import { generateAccessCode, hashAccessCode, isWellFormedAccessCode } from "@/lib/core/access";
 import { flatLabel, type AlertRec, type BillRec, type FlatRec, type ReadingRec, type SupplyRec, type TankerRec } from "@/lib/core/types";
 
 export const DEMO_SOCIETY_ID = "demo-society";
 export const DEMO_EMAIL = "committee@demo.aqualedger";
 export const DEMO_RESIDENT_FLAT = "B-202";
+/** B-202 starts with this resident code in the offline demo, so the resident view works out of the box */
+export const DEMO_RESIDENT_CODE = "DEM0-RES1-B202";
+const DEMO_RESIDENT_HASH = "c3c7aa4af5a099ed76bdcc2695c258884d3e6b9c7413e390c4d7c836ffb24296";
 const TZ = 330;
 
 type Row = { id: string; createdAt: string; updatedAt: string; [k: string]: any };
@@ -58,6 +62,8 @@ function reset(name = "Green Meadows CHS", city = "Pune", blocks = ["A", "B", "C
   db.seedParams = { blocks, perBlock };
   const put = (t: Table, rows: object[]) => rows.forEach((r) => db[t].set((r as Row).id, stamp(r) as Row));
   put("Flat", seed.flats);
+  const demoFlat = seed.flats.find((f) => flatLabel(f) === DEMO_RESIDENT_FLAT);
+  if (demoFlat) Object.assign(db.Flat.get(demoFlat.id)!, { accessCodeHash: DEMO_RESIDENT_HASH, accessIssuedAt: now() });
   put("Reading", seed.readings);
   put("TankerDelivery", seed.tankers);
   put("SourceSupply", seed.supplies);
@@ -293,13 +299,15 @@ export const demoClient = {
         ],
       });
     },
-    myResidentPortal: async () => {
+    residentPortal: async ({ code }: { code: string }) => {
       const society = ensure();
       await pause();
-      const flat = all<FlatRec>("Flat").find((f) => flatLabel(f) === DEMO_RESIDENT_FLAT) ?? all<FlatRec>("Flat")[0];
+      if (!isWellFormedAccessCode(code)) return fail("That doesn't look like an access code. It has 12 letters and numbers, like K7M2-QX9P-4HDR.");
+      const hash = await hashAccessCode(code);
+      const flat = all<FlatRec>("Flat").find((f) => f.accessCodeHash === hash);
+      if (!flat) return fail("Access code not recognised. It may have been replaced: ask your society committee for a new one.");
       const detail = buildFlatDetail(societyData(), flat.id, new Date(), TZ)!;
       return ok({
-        email: "resident@demo.aqualedger",
         society: { name: society.name, city: society.city },
         ...detail,
         flat: { label: detail.flat.label, block: flat.block, number: flat.number },
@@ -318,14 +326,26 @@ export const demoClient = {
       await pause();
       return ok(reset(s.name, s.city, undefined, undefined, s.commonCharge));
     },
-    inviteResident: async ({ flatId, email }: { flatId: string; email: string }) => {
+    issueResidentAccess: async ({ flatId }: { flatId: string }) => {
       ensure();
       await pause();
-      const flat = db.Flat.get(flatId);
+      const flat = db.Flat.get(flatId) as FlatRec | undefined;
       if (!flat) return fail("Flat not found in this society");
-      flat.residentEmail = email.trim().toLowerCase();
+      const code = generateAccessCode();
+      const issuedAt = now();
+      Object.assign(flat, { accessCodeHash: await hashAccessCode(code), accessIssuedAt: issuedAt });
       persist();
-      return ok({ ok: true, invited: true, email: flat.residentEmail, flat: `${flat.block}-${flat.number}` });
+      return ok({ code, flat: flatLabel(flat), issuedAt });
+    },
+    revokeResidentAccess: async ({ flatId }: { flatId: string }) => {
+      ensure();
+      await pause();
+      const flat = db.Flat.get(flatId) as FlatRec | undefined;
+      if (!flat) return fail("Flat not found in this society");
+      delete flat.accessCodeHash;
+      delete flat.accessIssuedAt;
+      persist();
+      return ok({ ok: true, flat: flatLabel(flat) });
     },
     inviteAdmin: async ({ email }: { email: string }) => {
       const s = ensure();

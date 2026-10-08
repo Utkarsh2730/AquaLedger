@@ -68,7 +68,6 @@ fns.adminOps.addToRolePolicy(
   })
 );
 fns.adminOps.addToRolePolicy(new iam.PolicyStatement({ actions: ["sns:Subscribe"], resources: [alertsTopic.topicArn] }));
-fns.queryApi.addToRolePolicy(new iam.PolicyStatement({ actions: ["cognito-idp:AdminGetUser"], resources: [userPool.userPoolArn] }));
 // System check: see whether admins have confirmed their alert-email subscriptions
 fns.queryApi.addToRolePolicy(new iam.PolicyStatement({ actions: ["sns:ListSubscriptionsByTopic"], resources: [alertsTopic.topicArn] }));
 

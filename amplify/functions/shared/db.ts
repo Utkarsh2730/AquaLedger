@@ -166,13 +166,33 @@ export async function markNightlyScan(societyId: string, at = new Date().toISOSt
   );
 }
 
-export async function updateFlatResident(flatId: string, email: string) {
+/** Sets (or, with null, removes) a flat's resident access code hash. Removing it drops the flat from the index. */
+export async function setFlatAccess(flatId: string, codeHash: string | null, at = new Date().toISOString()) {
   await ddb.send(
-    new UpdateCommand({
-      TableName: T.Flat,
-      Key: { id: flatId },
-      UpdateExpression: "SET residentEmail = :e, updatedAt = :u",
-      ExpressionAttributeValues: { ":e": email, ":u": new Date().toISOString() },
-    })
+    new UpdateCommand(
+      codeHash
+        ? {
+            TableName: T.Flat,
+            Key: { id: flatId },
+            UpdateExpression: "SET accessCodeHash = :h, accessIssuedAt = :t, updatedAt = :t",
+            ExpressionAttributeValues: { ":h": codeHash, ":t": at },
+          }
+        : {
+            TableName: T.Flat,
+            Key: { id: flatId },
+            UpdateExpression: "SET updatedAt = :t REMOVE accessCodeHash, accessIssuedAt",
+            ExpressionAttributeValues: { ":t": at },
+          }
+    )
   );
+}
+
+export async function findFlatByAccessHash(codeHash: string) {
+  const flats = await queryAll<FlatRec>({
+    TableName: T.Flat,
+    IndexName: "byAccessCode",
+    KeyConditionExpression: "accessCodeHash = :h",
+    ExpressionAttributeValues: { ":h": codeHash },
+  });
+  return flats[0];
 }

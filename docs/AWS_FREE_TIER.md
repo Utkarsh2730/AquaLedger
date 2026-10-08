@@ -14,7 +14,7 @@ cent at hackathon scale.** Nothing is always-on, and nothing bills by the hour.
 | --- | --- | --- | --- |
 | Lambda | 4 functions: admin-ops, analysis, query-api, meter-ingest | Always free: 1M requests + 400k GB-s / month | A few thousand invocations |
 | DynamoDB | 8 tables (on-demand) | Always free: 25 GB storage | ~15k items (~4 MB); on-demand reads/writes cost cents per million |
-| Cognito | Sign-up, login, Admin/Resident + per-society groups | Always free: 10,000 MAU (Lite/Essentials) | A handful of users |
+| Cognito | Committee sign-up/login, per-society groups; guest identities for residents' access codes | Always free: 10,000 MAU (Lite/Essentials) | A handful of users |
 | AppSync | GraphQL API between app and data | Credits / 12-month free tier (250k ops) | A few thousand operations |
 | EventBridge Scheduler | Nightly leak scan, monthly billing (1 schedule) | Always free: 14M invocations / month | 31 invocations |
 | SNS | Leak + bill emails, filtered per society | Always free: 1M publishes, 1,000 email deliveries / month | Tens of emails |

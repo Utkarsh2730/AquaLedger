@@ -8,7 +8,7 @@ Built on a fully serverless AWS Amplify Gen 2 backend that fits the **AWS free t
 
 | Layer | Feature | Where |
 | --- | --- | --- |
-| Core | Auth & multi-tenancy (Admin/Resident groups + one Cognito group per society) | `amplify/auth`, `amplify/data/resource.ts` |
+| Core | Auth & multi-tenancy (committee email login, one Cognito group per society; residents use a per-flat access code the committee issues) | `amplify/auth`, `amplify/data/resource.ts` |
 | Core | Society setup: blocks, flats | `/onboarding`, `admin-ops` Lambda |
 | Core | Seed data: 40 flats, 6 months, summer spikes, planted leak in **B-202** | `lib/core/seed.ts` |
 | Core | Tanker, municipal and borewell logging | `/sources` |
@@ -21,19 +21,19 @@ Built on a fully serverless AWS Amplify Gen 2 backend that fits the **AWS free t
 | Intelligence | Nightly scan, monthly billing (EventBridge schedule) | `amplify/functions/analysis` |
 | Intelligence | Monthly summary + "Ask your water data" chat (rule-based free; Claude on Bedrock optional) | `/insights` |
 | Extras | Live leak demo: virtual meter in the browser or `scripts/meter_simulator.py` | `/live`, `meter-ingest` Lambda |
-| Extras | Resident portal: own usage vs building average, own bills | `/resident` |
+| Extras | Resident portal: open with the flat's access code (no account); own usage vs building average, own bills | `/resident` |
 | Extras | Landing page with pricing tiers | `/` |
 
 ## Architecture
 
 ```
 Next.js (static export, Amplify Hosting)
-   │  Cognito (email login, ADMINS / RESIDENTS / <societyId> groups)
+   │  Cognito (committee email login, ADMINS / <societyId> groups; guest identity for residents)
    ▼
 AppSync GraphQL ──► DynamoDB (Society, Flat, Reading, TankerDelivery, SourceSupply, Bill, Alert, Insight)
    │ custom queries/mutations
-   ├─► admin-ops   Lambda: setupSociety, seedDemoData, inviteResident, importReadingsCsv
-   ├─► query-api   Lambda: getDashboard, getFlatDetail, askWaterData, myResidentPortal ──► (Bedrock, optional)
+   ├─► admin-ops   Lambda: setupSociety, seedDemoData, issue/revokeResidentAccess, importReadingsCsv
+   ├─► query-api   Lambda: getDashboard, getFlatDetail, askWaterData, residentPortal(code) ──► (Bedrock, optional)
    └─► analysis    Lambda: runAnalysis (leaks / billing / insights) ◄── EventBridge nightly schedule
                                                     └──► SNS topic ──► admin emails
 Smart meter / simulator ──HTTPS──► meter-ingest Lambda (Function URL) ──► DynamoDB + live alert + SNS

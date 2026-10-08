@@ -14,9 +14,7 @@ function Redirect() {
   useEffect(() => {
     if (authStatus !== "authenticated") return;
     getRoles().then((r) => {
-      if (r.societyIds.length) router.replace("/dashboard");
-      else if (r.isResident) router.replace("/resident");
-      else router.replace("/onboarding");
+      router.replace(r.societyIds.length ? "/dashboard" : "/onboarding");
     });
   }, [authStatus, router]);
   return <Spinner label="Signing you in…" />;
@@ -33,7 +31,7 @@ export default function LoginPage() {
   return (
     <BackendGate>
       <Authenticator.Provider>
-        <SignedIn role="committee">
+        <SignedIn>
           <Redirect />
         </SignedIn>
       </Authenticator.Provider>

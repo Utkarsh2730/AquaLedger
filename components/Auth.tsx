@@ -2,29 +2,29 @@
 
 import type { ReactNode } from "react";
 import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
-import AuthLayout, { type AuthRole } from "./AuthLayout";
+import AuthLayout from "./AuthLayout";
 import { Spinner } from "./ui";
 import { DEMO } from "@/lib/client";
 import { DEMO_EMAIL } from "@/lib/demo/backend";
 
-/** Cognito sign-in (in a role-specific layout), or a pass-through in demo mode. */
-export function AuthGate({ children, resident }: { children: ReactNode; resident?: boolean }) {
+/** Committee sign-in (Cognito), or a pass-through in demo mode. Residents use access codes instead. */
+export function AuthGate({ children }: { children: ReactNode }) {
   if (DEMO) return <>{children}</>;
   return (
     <Authenticator.Provider>
-      <SignedIn role={resident ? "resident" : "committee"}>{children}</SignedIn>
+      <SignedIn>{children}</SignedIn>
     </Authenticator.Provider>
   );
 }
 
-/** children once signed in; otherwise the sign-in screen for this role */
-export function SignedIn({ role, children }: { role: AuthRole; children: ReactNode }) {
+/** children once signed in; otherwise the committee sign-in screen */
+export function SignedIn({ children }: { children: ReactNode }) {
   const { authStatus } = useAuthenticator((c) => [c.authStatus]);
   if (authStatus === "authenticated") return <>{children}</>;
   if (authStatus === "configuring") return <Spinner />;
   return (
-    <AuthLayout role={role}>
-      <Authenticator hideSignUp={role === "resident"} />
+    <AuthLayout role="committee">
+      <Authenticator />
     </AuthLayout>
   );
 }

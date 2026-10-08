@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { client, flatLabelOf, loadFlats, unwrap, type FlatModel } from "@/lib/client";
+import { client, flatLabelOf, fmtDate, loadFlats, type FlatModel } from "@/lib/client";
+import ResidentAccess from "@/components/ResidentAccess";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, Empty, ErrorBox, Input, PageHeader, Spinner, Table, Td } from "@/components/ui";
 
@@ -10,8 +11,7 @@ export default function FlatsPage() {
   const { societyId } = useSociety();
   const [flats, setFlats] = useState<FlatModel[] | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const [inviting, setInviting] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
+  const [accessFor, setAccessFor] = useState<FlatModel | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [newFlat, setNewFlat] = useState({ block: "", number: "", occupants: 3 });
@@ -21,20 +21,6 @@ export default function FlatsPage() {
   useEffect(() => {
     load();
   }, [load]);
-
-  async function invite(flatId: string) {
-    setError(null);
-    setMsg(null);
-    try {
-      const res = unwrap<{ invited: boolean; email: string; flat: string }>(await client.mutations.inviteResident({ societyId, flatId, email }));
-      setMsg(res.invited ? `Invitation emailed to ${res.email} for ${res.flat}.` : `${res.email} already had an account and is now linked to ${res.flat}.`);
-      setInviting(null);
-      setEmail("");
-      load();
-    } catch (err) {
-      setError(err);
-    }
-  }
 
   async function addFlat(e: React.FormEvent) {
     e.preventDefault();
@@ -67,11 +53,23 @@ export default function FlatsPage() {
   }
 
   if (!flats) return error ? <ErrorBox error={error} /> : <Spinner />;
-  const shown = flats.filter((f) => flatLabelOf(f).toLowerCase().includes(filter.toLowerCase()) || (f.residentEmail ?? "").includes(filter.toLowerCase()));
+  const shown = flats.filter((f) => flatLabelOf(f).toLowerCase().includes(filter.toLowerCase()));
+  const withAccess = flats.filter((f) => f.accessIssuedAt).length;
   return (
     <div className="space-y-6">
-      <PageHeader title="Flats" subtitle={`${flats.length} flats · ${flats.filter((f) => f.residentEmail).length} residents invited`} />
+      <PageHeader title="Flats" subtitle={`${flats.length} flats · ${withAccess} with resident access`} />
       <ErrorBox error={error} />
+      {accessFor && (
+        <ResidentAccess
+          societyId={societyId}
+          flat={accessFor}
+          onClose={() => setAccessFor(null)}
+          onChanged={() => loadFlats(societyId).then((all) => {
+            setFlats(all);
+            setAccessFor((cur) => all.find((x) => x.id === cur?.id) ?? cur);
+          })}
+        />
+      )}
       {msg && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{msg}</div>}
       <Card title="Add a flat">
         <form onSubmit={addFlat} className="flex flex-wrap items-end gap-3">
@@ -92,11 +90,11 @@ export default function FlatsPage() {
           </Button>
         </form>
       </Card>
-      <Card action={<Input placeholder="Search flat or email" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />}>
+      <Card action={<Input placeholder="Search flats" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />}>
         {shown.length === 0 ? (
           <Empty>No flats match.</Empty>
         ) : (
-          <Table head={["Flat", "People", "Resident", ""]}>
+          <Table head={["Flat", "People", "Resident access", ""]}>
             {shown.map((f) => (
               <tr key={f.id}>
                 <Td>
@@ -105,37 +103,16 @@ export default function FlatsPage() {
                   </Link>
                 </Td>
                 <Td>{f.occupants ?? "—"}</Td>
-                <Td>{f.residentEmail ? <Badge tone="good">{f.residentEmail}</Badge> : <span className="text-slate-400">not invited</span>}</Td>
+                <Td>{f.accessIssuedAt ? <Badge tone="good">Active since {fmtDate(f.accessIssuedAt.slice(0, 10))}</Badge> : <span className="text-slate-400">Not given</span>}</Td>
                 <Td className="text-right">
-                  {inviting === f.id ? (
-                    <form
-                      className="flex justify-end gap-2"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        invite(f.id);
-                      }}
-                    >
-                      <Input type="email" required placeholder="resident@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="max-w-56" />
-                      <Button type="submit">Send</Button>
-                      <Button type="button" variant="ghost" onClick={() => setInviting(null)}>
-                        Cancel
-                      </Button>
-                    </form>
-                  ) : (
-                    <div className="flex justify-end gap-1">
-                      <Button variant="secondary" onClick={() => setInviting(f.id)}>
-                        {f.residentEmail ? "Re-invite" : (
-                          <>
-                            <span className="sm:hidden">Invite</span>
-                            <span className="hidden sm:inline">Invite resident</span>
-                          </>
-                        )}
-                      </Button>
-                      <Button variant="ghost" onClick={() => removeFlat(f)} aria-label={`Remove ${flatLabelOf(f)}`}>
-                        ✕
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex justify-end gap-1">
+                    <Button variant="secondary" onClick={() => setAccessFor(f)}>
+                      {f.accessIssuedAt ? "Manage access" : "Give access"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => removeFlat(f)} aria-label={`Remove ${flatLabelOf(f)}`}>
+                      ✕
+                    </Button>
+                  </div>
                 </Td>
               </tr>
             ))}

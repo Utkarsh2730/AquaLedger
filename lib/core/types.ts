@@ -12,7 +12,8 @@ export interface FlatRec {
   block: string;
   number: string;
   occupants?: number | null;
-  residentEmail?: string | null;
+  accessCodeHash?: string | null;
+  accessIssuedAt?: string | null;
 }
 
 export interface ReadingRec {
