@@ -60,7 +60,9 @@ export function Button({ variant = "primary", className, ...props }: ButtonHTMLA
     <button
       {...props}
       className={cx(
-        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
+        // text-sm! because Amplify UI's global reset (button { font-size: inherit }) is unlayered and
+        // would otherwise beat Tailwind's size; the same goes for the fields below
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm! font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
         variant === "primary" && "bg-brand-600 text-white hover:bg-brand-700",
         variant === "secondary" && "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
         variant === "danger" && "bg-rose-600 text-white hover:bg-rose-700",
@@ -82,11 +84,11 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 }
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={cx("w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-brand-500 sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-100", props.className)} />;
+  return <input {...props} className={cx("w-full rounded-lg border border-slate-300 px-3 py-2 text-base! focus:border-brand-500 sm:text-sm! focus:outline-none focus:ring-2 focus:ring-brand-100", props.className)} />;
 }
 
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={cx("w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base focus:border-brand-500 sm:text-sm focus:outline-none", props.className)} />;
+  return <select {...props} className={cx("w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base! focus:border-brand-500 sm:text-sm! focus:outline-none", props.className)} />;
 }
 
 export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "good" | "warn" | "bad" | "info" }) {

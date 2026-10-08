@@ -1,8 +1,4 @@
-/* Amplify UI's stylesheet goes in its own layer, after Tailwind's base and before its utilities.
-   Unlayered, its reset (button, input { font-size: inherit }) beat every Tailwind text size. */
-@layer theme, base, amplify, components, utilities;
 @import "tailwindcss";
-@import "@aws-amplify/ui-react/styles.css" layer(amplify);
 
 @theme {
   --color-brand-50: #ecfeff;
