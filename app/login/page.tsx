@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
 import { DEMO, getRoles } from "@/lib/client";
 import BackendGate from "@/components/BackendGate";
-import { AuthHeader, COMMITTEE_HEADER } from "@/components/Auth";
+import { SignedIn } from "@/components/Auth";
 import { Spinner } from "@/components/ui";
 
 function Redirect() {
@@ -32,11 +32,11 @@ export default function LoginPage() {
   if (DEMO) return <DemoRedirect />;
   return (
     <BackendGate>
-      <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <Authenticator initialState="signIn" components={{ Header: () => <AuthHeader {...COMMITTEE_HEADER} /> }}>
+      <Authenticator.Provider>
+        <SignedIn role="committee">
           <Redirect />
-        </Authenticator>
-      </div>
+        </SignedIn>
+      </Authenticator.Provider>
     </BackendGate>
   );
 }

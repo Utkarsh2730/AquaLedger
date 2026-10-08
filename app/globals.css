@@ -31,3 +31,59 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .al-float, .al-drip, .al-pulse, .al-flow { animation: none; }
 }
+
+/* sign-in screens: each role gets its own accent inside Amplify's Authenticator */
+.auth-committee,
+.auth-resident {
+  --amplify-components-authenticator-router-border-width: 0;
+  --amplify-components-authenticator-router-box-shadow: none;
+  --amplify-components-authenticator-router-background-color: transparent;
+  --amplify-components-authenticator-form-padding: 1.25rem 0 0;
+  --amplify-components-authenticator-container-width-max: 100%;
+}
+.auth-committee {
+  --amplify-colors-primary-10: #ecfeff;
+  --amplify-colors-primary-20: #cffafe;
+  --amplify-colors-primary-40: #67e8f9;
+  --amplify-colors-primary-60: #0891b2;
+  --amplify-colors-primary-80: #0e7490;
+  --amplify-colors-primary-90: #155e75;
+  --amplify-colors-primary-100: #164e63;
+  --amplify-colors-font-interactive: #0e7490;
+}
+.auth-resident {
+  --amplify-colors-primary-10: #ecfdf5;
+  --amplify-colors-primary-20: #d1fae5;
+  --amplify-colors-primary-40: #6ee7b7;
+  --amplify-colors-primary-60: #10b981;
+  --amplify-colors-primary-80: #047857;
+  --amplify-colors-primary-90: #065f46;
+  --amplify-colors-primary-100: #064e3b;
+  --amplify-colors-font-interactive: #047857;
+}
+/* Amplify resolves these at :root, so they must be re-declared here to pick up the role palette */
+.auth-committee,
+.auth-resident {
+  --amplify-colors-border-focus: var(--amplify-colors-primary-100);
+  --amplify-components-button-primary-background-color: var(--amplify-colors-primary-80);
+  --amplify-components-button-primary-hover-background-color: var(--amplify-colors-primary-90);
+  --amplify-components-button-primary-focus-background-color: var(--amplify-colors-primary-90);
+  --amplify-components-button-primary-active-background-color: var(--amplify-colors-primary-100);
+  --amplify-components-button-hover-background-color: var(--amplify-colors-primary-10);
+  --amplify-components-button-hover-border-color: var(--amplify-colors-primary-60);
+  --amplify-components-button-focus-background-color: var(--amplify-colors-primary-10);
+  --amplify-components-button-active-background-color: var(--amplify-colors-primary-20);
+  --amplify-components-button-active-border-color: var(--amplify-colors-primary-100);
+  --amplify-components-button-link-color: var(--amplify-colors-font-interactive);
+  --amplify-components-button-link-hover-background-color: var(--amplify-colors-primary-10);
+  --amplify-components-button-link-focus-background-color: var(--amplify-colors-primary-10);
+  --amplify-components-button-link-active-background-color: var(--amplify-colors-primary-20);
+  --amplify-components-tabs-item-active-color: var(--amplify-colors-font-interactive);
+  --amplify-components-tabs-item-active-border-color: var(--amplify-colors-font-interactive);
+  --amplify-components-checkbox-icon-background-color: var(--amplify-colors-primary-80);
+}
+.auth-committee [data-amplify-authenticator],
+.auth-resident [data-amplify-authenticator] {
+  display: block;
+  min-height: 0;
+}
