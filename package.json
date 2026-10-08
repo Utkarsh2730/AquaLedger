@@ -1,0 +1,48 @@
+{
+  "name": "aqualedger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AquaLedger - water management SaaS for apartment societies (AWS Amplify Gen 2, free-tier friendly)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p amplify",
+    "sandbox": "ampx sandbox",
+    "sandbox:delete": "ampx sandbox delete"
+  },
+  "dependencies": {
+    "@aws-amplify/adapter-nextjs": "^1.8.0",
+    "@aws-amplify/ui-react": "^6.15.7",
+    "aws-amplify": "^6.22.1",
+    "next": "^15.5.27",
+    "papaparse": "^5.7.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "recharts": "^3.10.1"
+  },
+  "devDependencies": {
+    "@anthropic-ai/bedrock-sdk": "^0.34.4",
+    "@aws-amplify/backend": "^1.25.1",
+    "@aws-amplify/backend-cli": "^1.10.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.1147.0",
+    "@aws-sdk/client-dynamodb": "^3.1147.0",
+    "@aws-sdk/client-sns": "^3.1147.0",
+    "@aws-sdk/lib-dynamodb": "^3.1147.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/aws-lambda": "^8.10.164",
+    "@types/node": "^22.20.5",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "aws-cdk-lib": "^2.272.0",
+    "constructs": "^10.8.1",
+    "esbuild": "^0.28.2",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  },
+  "type": "module"
+}

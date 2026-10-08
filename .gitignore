@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+.amplify/
+amplify_outputs.json
+amplify_outputs*
+cdk.out/
+*.tsbuildinfo
+next-env.d.ts
+.env*.local
+.DS_Store
+__pycache__/
