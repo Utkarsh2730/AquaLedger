@@ -81,9 +81,9 @@ const ingestUrl = fns.meterIngest.addFunctionUrl({
     maxAge: Duration.hours(1),
   },
 });
-// Cap concurrency so a leaked device token can't run up a bill.
-const cfnIngest = fns.meterIngest.node.defaultChild as lambda.CfnFunction;
-cfnIngest.reservedConcurrentExecutions = 5;
+// No reserved concurrency here: new accounts have a 10-execution limit and AWS rejects any
+// reservation that leaves fewer than 10 unreserved. A bad device token is rejected before any
+// database write, and Lambda's free tier covers 1M requests a month.
 
 backend.addOutput({
   custom: {

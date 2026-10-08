@@ -31,7 +31,7 @@ cent at hackathon scale.** Nothing is always-on, and nothing bills by the hour.
 | Bill PDFs rendered in Lambda, stored in S3 | Printable bill page; "Download PDF" uses the browser's print-to-PDF | No PDF library, no storage. Also a roadmap cut line. |
 | SES emails | SNS email subscriptions with a `societyId` filter policy | SES starts in sandbox (verified recipients only) and is not always-free; SNS email is. Admins confirm one AWS email at sign-up. |
 | SNS SMS | Email only | SMS is billed per message in every region. |
-| IoT Core MQTT + rule | Lambda Function URL + device token header (Python simulator *and* an in-browser virtual meter) | Same live demo, no certificates or IoT policies. The roadmap's cut line says it "looks identical in the demo". Reserved concurrency is capped at 5 so a leaked token can't run up a bill. |
+| IoT Core MQTT + rule | Lambda Function URL + device token header (Python simulator *and* an in-browser virtual meter) | Same live demo, no certificates or IoT policies. The roadmap's cut line says it "looks identical in the demo". A request with a wrong token is rejected before anything is written. |
 | Bedrock always on | Rule-based summaries + keyword chat by default; Claude on Bedrock is one setting away | Bedrock is the only service with a real per-call cost. |
 | Next.js SSR on Amplify | Static export (`output: "export"`) | Every page is client-rendered against AppSync anyway; static hosting has no compute charge. |
 
