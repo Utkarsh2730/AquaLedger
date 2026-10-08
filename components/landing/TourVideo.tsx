@@ -28,7 +28,7 @@ export default function TourVideo() {
         onClick={open}
         className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-2 font-medium text-cyan-700 hover:bg-cyan-50 sm:px-3"
       >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
+        <svg viewBox="0 0 24 24" width={20} height={20} className="h-5 w-5" aria-hidden>
           <circle cx="12" cy="12" r="11" fill="currentColor" opacity="0.12" />
           <path d="M10 8.5v7l6-3.5z" fill="currentColor" />
         </svg>

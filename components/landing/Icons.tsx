@@ -2,6 +2,9 @@ import type { SVGProps } from "react";
 
 const base = (p: SVGProps<SVGSVGElement>) => ({
   viewBox: "0 0 24 24",
+  // intrinsic size so icons stay icon-sized even if the stylesheet fails to load
+  width: 24,
+  height: 24,
   fill: "none",
   stroke: "currentColor",
   strokeWidth: 1.8,
