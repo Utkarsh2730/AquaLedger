@@ -9,8 +9,12 @@ import { DEMO_SOCIETY_ID, demoClient, demoIngest } from "@/lib/demo/backend";
 /** `npm run demo`: everything runs in the browser against lib/demo/backend.ts, no AWS needed. */
 export const DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
 
+/** true when amplify_outputs.json describes a deployed backend (not the placeholder) */
+const realOutputs = outputs as { auth?: { user_pool_id?: string }; data?: { url?: string } };
+export const BACKEND_READY = DEMO || Boolean(realOutputs.auth?.user_pool_id && realOutputs.data?.url);
+
 type DataClient = ReturnType<typeof generateClient<Schema>>;
-export const client: DataClient = DEMO ? (demoClient as unknown as DataClient) : generateClient<Schema>();
+export const client: DataClient = DEMO || !BACKEND_READY ? (demoClient as unknown as DataClient) : generateClient<Schema>();
 
 /** a.json() results can arrive as a JSON string or an object depending on the path. */
 export function parseJson<T>(v: unknown): T {

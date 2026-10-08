@@ -13,7 +13,11 @@
     "sandbox:delete": "ampx sandbox delete",
     "demo": "node scripts/ensure-outputs.mjs && NEXT_PUBLIC_DEMO_MODE=1 next dev",
     "build:demo": "node scripts/ensure-outputs.mjs && NEXT_PUBLIC_DEMO_MODE=1 next build",
-    "record:tour": "node scripts/record-tour.mjs"
+    "record:tour": "node scripts/record-tour.mjs",
+    "postinstall": "node scripts/ensure-outputs.mjs",
+    "predev": "node scripts/ensure-outputs.mjs",
+    "prebuild": "node scripts/ensure-outputs.mjs",
+    "pretypecheck": "node scripts/ensure-outputs.mjs"
   },
   "dependencies": {
     "@aws-amplify/adapter-nextjs": "^1.8.0",

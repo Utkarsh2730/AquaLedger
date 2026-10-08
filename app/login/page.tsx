@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
 import { DEMO, getRoles } from "@/lib/client";
+import BackendGate from "@/components/BackendGate";
 import { Spinner } from "@/components/ui";
 
 function Redirect() {
@@ -29,13 +30,15 @@ function DemoRedirect() {
 export default function LoginPage() {
   if (DEMO) return <DemoRedirect />;
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
-      <a href="/" className="text-2xl font-semibold text-brand-700">
-        💧 AquaLedger
-      </a>
-      <Authenticator initialState="signIn">
-        <Redirect />
-      </Authenticator>
-    </div>
+    <BackendGate>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
+        <a href="/" className="text-2xl font-semibold text-brand-700">
+          💧 AquaLedger
+        </a>
+        <Authenticator initialState="signIn">
+          <Redirect />
+        </Authenticator>
+      </div>
+    </BackendGate>
   );
 }

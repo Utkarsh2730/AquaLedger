@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AuthGate, DemoBanner, useSession } from "@/components/Auth";
+import BackendGate from "@/components/BackendGate";
 import { client, inr, unwrap } from "@/lib/client";
 import { ErrorBox, Spinner, Card } from "@/components/ui";
 import FlatUsage from "@/components/FlatUsage";
@@ -79,9 +80,11 @@ function Portal() {
 
 export default function ResidentPage() {
   return (
-    <AuthGate hideSignUp>
-      <DemoBanner />
-      <Portal />
-    </AuthGate>
+    <BackendGate>
+      <AuthGate hideSignUp>
+        <DemoBanner />
+        <Portal />
+      </AuthGate>
+    </BackendGate>
   );
 }
