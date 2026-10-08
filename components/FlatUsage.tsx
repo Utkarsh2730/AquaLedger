@@ -3,7 +3,9 @@
 import { Badge, Card, Empty, Stat, Table, Td } from "./ui";
 import { FlatVsAverageChart } from "./charts";
 import { inr, kl } from "@/lib/client";
-import { monthLabel } from "@/lib/core/time";
+import { localMonth, monthLabel } from "@/lib/core/time";
+
+const ALERT_LABEL: Record<string, string> = { spike: "Usage spike", night_flow: "Night-time flow", live_spike: "Live abnormal flow" };
 import type { FlatDetail } from "@/lib/core/summary";
 import type { BillRec } from "@/lib/core/types";
 
@@ -14,13 +16,14 @@ export default function FlatUsage({ detail, bills, billHref }: { detail: Omit<Fl
   const avg = last30.reduce((a, d) => a + d.buildingAvg, 0);
   const ratio = avg > 0 ? mine / avg : 0;
   const open = detail.alerts.filter((a) => !a.resolved);
+  const currentMonth = localMonth(new Date());
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Last 30 days" value={kl(mine)} hint={`${Math.round(mine / 30)} L/day`} />
         <Stat label="Building average" value={kl(avg)} hint="per flat, same period" />
         <Stat label="vs average" value={`${ratio.toFixed(2)}×`} tone={ratio > 1.3 ? "bad" : "good"} hint={ratio > 1.3 ? "Above average" : "Within normal range"} />
-        <Stat label="Open alerts" value={open.length} tone={open.length ? "bad" : "good"} hint={open.length ? open[0].type.replace("_", " ") : "No leaks detected"} />
+        <Stat label="Open alerts" value={open.length} tone={open.length ? "bad" : "good"} hint={open.length ? ALERT_LABEL[open[0].type] ?? "Possible leak" : "No leaks detected"} />
       </div>
       {open.length > 0 && (
         <div className="space-y-2">
@@ -36,7 +39,7 @@ export default function FlatUsage({ detail, bills, billHref }: { detail: Omit<Fl
           <FlatVsAverageChart data={detail.daily} xKey="day" xFormat={(d) => d.slice(5)} />
         </Card>
         <Card title="Monthly use vs building average">
-          <FlatVsAverageChart data={detail.monthly} xKey="month" xFormat={(m) => monthLabel(m)} />
+          <FlatVsAverageChart data={detail.monthly} xKey="month" xFormat={(m) => (m === currentMonth ? `${monthLabel(m)} (so far)` : monthLabel(m))} />
         </Card>
       </div>
       <Card title="Bills">

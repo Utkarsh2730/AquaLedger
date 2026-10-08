@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { client, inr, kl, listAll } from "@/lib/client";
+import { client, fmtDate, inr, kl, listAll } from "@/lib/client";
 import type { Schema } from "@/amplify/data/resource";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, Empty, ErrorBox, Field, Input, PageHeader, Select, Table, Td } from "@/components/ui";
@@ -15,6 +15,8 @@ export default function SourcesPage() {
   const [tankers, setTankers] = useState<Tanker[]>([]);
   const [supplies, setSupplies] = useState<Supply[]>([]);
   const [error, setError] = useState<unknown>(null);
+  const [showAll, setShowAll] = useState({ tankers: false, supplies: false });
+  const PAGE = 12;
 
   const load = useCallback(async () => {
     try {
@@ -111,14 +113,23 @@ export default function SourcesPage() {
         </Card>
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title={`Tanker history (${tankers.length})`}>
+        <Card
+          title={`Tanker history (${tankers.length})`}
+          action={
+            tankers.length > PAGE && (
+              <Button variant="ghost" onClick={() => setShowAll((s) => ({ ...s, tankers: !s.tankers }))}>
+                {showAll.tankers ? "Show latest" : `Show all ${tankers.length}`}
+              </Button>
+            )
+          }
+        >
           {tankers.length === 0 ? (
             <Empty>No tankers logged yet.</Empty>
           ) : (
             <Table head={["Date", "Vendor", "Volume", "Cost", "₹/kL", ""]}>
-              {tankers.map((t) => (
+              {(showAll.tankers ? tankers : tankers.slice(0, PAGE)).map((t) => (
                 <tr key={t.id}>
-                  <Td>{t.date}</Td>
+                  <Td>{fmtDate(t.date)}</Td>
                   <Td>{t.vendor}</Td>
                   <Td>{kl(t.litres)}</Td>
                   <Td>{inr(t.cost)}</Td>
@@ -133,14 +144,23 @@ export default function SourcesPage() {
             </Table>
           )}
         </Card>
-        <Card title={`Supply history (${supplies.length})`}>
+        <Card
+          title={`Supply history (${supplies.length})`}
+          action={
+            supplies.length > PAGE && (
+              <Button variant="ghost" onClick={() => setShowAll((s) => ({ ...s, supplies: !s.supplies }))}>
+                {showAll.supplies ? "Show latest" : `Show all ${supplies.length}`}
+              </Button>
+            )
+          }
+        >
           {supplies.length === 0 ? (
             <Empty>No supply logged yet.</Empty>
           ) : (
             <Table head={["Date", "Source", "Volume", "Cost", ""]}>
-              {supplies.map((s) => (
+              {(showAll.supplies ? supplies : supplies.slice(0, PAGE)).map((s) => (
                 <tr key={s.id}>
-                  <Td>{s.date}</Td>
+                  <Td>{fmtDate(s.date)}</Td>
                   <Td>
                     <Badge tone={s.type === "municipal" ? "info" : "good"}>{s.type}</Badge>
                   </Td>

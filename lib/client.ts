@@ -65,6 +65,9 @@ export async function postMeterReading(body: { societyId: string; flat: string; 
 export const inr = (n: number | null | undefined) => `₹${Math.round(n ?? 0).toLocaleString("en-IN")}`;
 export const kl = (litres: number | null | undefined, dp = 1) =>
   `${(Math.round(((litres ?? 0) / 1000) * 10 ** dp) / 10 ** dp).toLocaleString("en-IN")} kL`;
+/** "7 Oct 2026" from a YYYY-MM-DD date */
+export const fmtDate = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+
 export const fmtDateTime = (iso: string) => new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 
 export const litresFmt = (n: number | null | undefined) => `${Math.round(n ?? 0).toLocaleString("en-IN")} L`;

@@ -3,6 +3,9 @@ import { addDays, localDay, localHour, DEFAULT_TZ_OFFSET_MIN } from "./time";
 import type { FlatRec, ReadingRec, AlertType, Severity } from "./types";
 import { flatLabel } from "./types";
 
+/** "7 Oct" from YYYY-MM-DD */
+const dayLabel = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
+
 export interface LeakFinding {
   flatId: string;
   flatLabel: string;
@@ -70,7 +73,7 @@ export function detectSpikes(flats: FlatRec[], readings: ReadingRec[], opts: Lea
         type: "spike",
         severity,
         wasteLitresPerDay: round(today - m),
-        message: `${flatLabel(flat)} used ${round(today)} L on ${target}, ${round(today / m, 1)}x its normal ${round(m)} L a day (${round(score, 1)} standard deviations above).`,
+        message: `${flatLabel(flat)} used ${round(today)} L on ${dayLabel(target)}, ${round(today / m, 1)}× its normal ${round(m)} L a day.`,
         evidence: { day: target, litres: round(today), mean: round(m), sd: round(sd, 1), z: round(score, 2) },
       });
     }

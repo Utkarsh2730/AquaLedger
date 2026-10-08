@@ -52,7 +52,7 @@ export default function AlertsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Leak alerts"
-        subtitle="Nightly scan flags usage > 2.5σ above a flat's 30-day mean, and steady 2-4 a.m. flow on 3+ nights. Live meters alert within seconds."
+        subtitle="Every night each flat is checked for unusual spikes in usage and for water running between 2 and 4 a.m. Smart meters raise alerts within seconds."
         action={
           <Button onClick={scan} disabled={scanning}>
             {scanning ? "Scanning…" : "🔍 Scan for leaks now"}

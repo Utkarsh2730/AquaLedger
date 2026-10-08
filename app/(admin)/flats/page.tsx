@@ -96,7 +96,7 @@ export default function FlatsPage() {
         {shown.length === 0 ? (
           <Empty>No flats match.</Empty>
         ) : (
-          <Table head={["Flat", "Occupants", "Resident", ""]}>
+          <Table head={["Flat", "People", "Resident", ""]}>
             {shown.map((f) => (
               <tr key={f.id}>
                 <Td>
@@ -124,7 +124,12 @@ export default function FlatsPage() {
                   ) : (
                     <div className="flex justify-end gap-1">
                       <Button variant="secondary" onClick={() => setInviting(f.id)}>
-                        {f.residentEmail ? "Re-invite" : "Invite resident"}
+                        {f.residentEmail ? "Re-invite" : (
+                          <>
+                            <span className="sm:hidden">Invite</span>
+                            <span className="hidden sm:inline">Invite resident</span>
+                          </>
+                        )}
                       </Button>
                       <Button variant="ghost" onClick={() => removeFlat(f)} aria-label={`Remove ${flatLabelOf(f)}`}>
                         ✕

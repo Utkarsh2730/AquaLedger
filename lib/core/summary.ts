@@ -218,7 +218,7 @@ export function buildFlatDetail(data: SocietyData, flatId: string, now = new Dat
   const totalsByDay = dailyTotals(data.readings, tz);
   const today = localDay(now, tz);
   const daily: FlatDetail["daily"] = [];
-  for (let d = addDays(today, -60); d <= today; d = addDays(d, 1)) {
+  for (let d = addDays(today, -60); d < today; d = addDays(d, 1)) {
     daily.push({ day: d, litres: round(byDay.get(d) ?? 0), buildingAvg: round((totalsByDay.get(d) ?? 0) / flatsN) });
   }
   return {

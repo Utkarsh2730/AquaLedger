@@ -68,7 +68,7 @@ export default function LivePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Live meters" subtitle="Simulated smart meter → Lambda Function URL → DynamoDB → alert + email, within seconds." />
+      <PageHeader title="Live meters" subtitle="Smart meters send a reading every few seconds. Abnormal flow raises an alert and emails the committee straight away." />
       <ErrorBox error={error} />
       {!meterIngestUrl && <ErrorBox error="meterIngestUrl missing from amplify_outputs.json. Redeploy the backend." />}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -93,7 +93,13 @@ export default function LivePage() {
           </div>
         </Card>
         <Card title="Flow" className="lg:col-span-2" action={running && <Badge tone={tapOpen ? "bad" : "good"}>{tapOpen ? "abnormal" : "normal"}</Badge>}>
-          <LiveChart data={ticks} />
+          {ticks.length ? (
+            <LiveChart data={ticks} />
+          ) : (
+            <div className="flex h-[220px] items-center justify-center rounded-lg border border-dashed border-slate-300 text-center text-sm text-slate-500">
+              Press <b className="mx-1">Start meter</b> to see live flow here.
+            </div>
+          )}
         </Card>
       </div>
       <Card title="Alerts raised during this session">
