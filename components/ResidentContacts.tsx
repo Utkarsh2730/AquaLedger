@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { client, DEMO, flatLabelOf, residentEmailEnabled, residentWhatsAppEnabled, unwrap, type FlatModel, type SendAccessResult } from "@/lib/client";
 import { formatAccessCode, residentLink } from "@/lib/core/access";
 import { downloadAccessCsv, printAccessSlips, type AccessRow } from "@/lib/accessSheet";
@@ -23,7 +23,19 @@ const listOf = (v: (string | null)[] | null | undefined) => (v ?? []).filter(Boo
  * then sends every listed flat its login (flat number + access code) by email and WhatsApp. No
  * resident signs up or sets a password.
  */
-export default function ResidentContacts({ societyId, flats, onChanged }: { societyId: string; flats: FlatModel[]; onChanged: () => Promise<unknown> }) {
+export default function ResidentContacts({
+  societyId,
+  flats,
+  onChanged,
+  giveAllRequest = 0,
+}: {
+  societyId: string;
+  flats: FlatModel[];
+  onChanged: () => Promise<unknown>;
+  /** bumped by the page header's "Give access to all flats" button */
+  giveAllRequest?: number;
+}) {
+  const root = useRef<HTMLDivElement>(null);
   const [importing, setImporting] = useState(false);
   const [text, setText] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
@@ -155,6 +167,13 @@ export default function ResidentContacts({ societyId, flats, onChanged }: { soci
     }
   }
 
+  useEffect(() => {
+    if (!giveAllRequest) return;
+    root.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    send("all");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per click of the header button
+  }, [giveAllRequest]);
+
   const count = (s: SendAccessResult["status"]) => results?.filter((r) => r.status === s) ?? [];
   const autoSent = results?.reduce((n, r) => n + r.sentTo.length, 0) ?? 0;
   // in "give all" mode, flats with no contact are expected (their codes are on the sheet), not problems
@@ -163,6 +182,7 @@ export default function ResidentContacts({ societyId, flats, onChanged }: { soci
   const markTapped = (key: string) => setTapped((prev) => new Set(prev).add(key));
 
   return (
+    <div ref={root} id="resident-access" className="scroll-mt-20">
     <Card title="Resident access">
       <div className="space-y-4 text-sm">
         <p className="text-slate-600">
@@ -405,5 +425,6 @@ export default function ResidentContacts({ societyId, flats, onChanged }: { soci
         )}
       </div>
     </Card>
+    </div>
   );
 }

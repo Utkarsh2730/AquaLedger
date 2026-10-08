@@ -107,3 +107,11 @@ export const ArrowRightIcon = (p: P) => svg(p, <path d="M5 12h14M13 6l6 6-6 6" /
 export const MoonIcon = (p: P) => svg(p, <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />);
 export const DownloadIcon = (p: P) => svg(p, <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />);
 export const ChatIcon = (p: P) => svg(p, <path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z" />);
+export const KeyIcon = (p: P) =>
+  svg(
+    p,
+    <>
+      <circle cx="7.5" cy="15.5" r="4.5" />
+      <path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2" />
+    </>
+  );

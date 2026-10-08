@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { client, flatLabelOf, fmtDate, loadFlats, type FlatModel } from "@/lib/client";
 import ResidentAccess from "@/components/ResidentAccess";
 import ResidentContacts from "@/components/ResidentContacts";
+import { KeyIcon } from "@/components/icons";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, Empty, ErrorBox, Input, PageHeader, Spinner, Table, Td } from "@/components/ui";
 
@@ -13,6 +14,7 @@ export default function FlatsPage() {
   const [flats, setFlats] = useState<FlatModel[] | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [accessFor, setAccessFor] = useState<FlatModel | null>(null);
+  const [giveAll, setGiveAll] = useState(0);
   const [msg, setMsg] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [newFlat, setNewFlat] = useState({ block: "", number: "", occupants: 3 });
@@ -58,7 +60,18 @@ export default function FlatsPage() {
   const withAccess = flats.filter((f) => f.accessIssuedAt).length;
   return (
     <div className="space-y-6">
-      <PageHeader title="Flats" subtitle={`${flats.length} flats · ${withAccess} with resident access`} />
+      <PageHeader
+        title="Flats & residents"
+        subtitle={`${flats.length} flats · ${withAccess} with resident access`}
+        action={
+          withAccess < flats.length && (
+            <Button onClick={() => setGiveAll((n) => n + 1)} className="bg-emerald-600 px-4 py-2.5 hover:bg-emerald-700">
+              <KeyIcon width={18} height={18} />
+              Give access to all flats
+            </Button>
+          )
+        }
+      />
       <ErrorBox error={error} />
       {accessFor && (
         <ResidentAccess
@@ -72,6 +85,7 @@ export default function FlatsPage() {
         />
       )}
       {msg && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{msg}</div>}
+      <ResidentContacts societyId={societyId} flats={flats} giveAllRequest={giveAll} onChanged={() => loadFlats(societyId).then(setFlats)} />
       <Card title="Add a flat">
         <form onSubmit={addFlat} className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
@@ -91,7 +105,6 @@ export default function FlatsPage() {
           </Button>
         </form>
       </Card>
-      <ResidentContacts societyId={societyId} flats={flats} onChanged={() => loadFlats(societyId).then(setFlats)} />
       <Card action={<Input placeholder="Search flats" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />}>
         {shown.length === 0 ? (
           <Empty>No flats match.</Empty>
