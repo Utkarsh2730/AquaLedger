@@ -14,6 +14,7 @@
     "demo": "node scripts/ensure-outputs.mjs && node scripts/check-port.mjs && NEXT_PUBLIC_DEMO_MODE=1 NEXT_DIST_DIR=.next-demo next dev",
     "build:demo": "node scripts/ensure-outputs.mjs && NEXT_PUBLIC_DEMO_MODE=1 NEXT_DIST_DIR=out next build",
     "record:tour": "node scripts/record-tour.mjs",
+    "record:youtube": "node scripts/record-youtube.mjs",
     "postinstall": "node scripts/ensure-outputs.mjs",
     "predev": "node scripts/ensure-outputs.mjs && node scripts/check-port.mjs",
     "prebuild": "node scripts/ensure-outputs.mjs",
