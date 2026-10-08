@@ -4,7 +4,7 @@ import { planBilling, planLeakAlerts } from "../../../lib/core/jobs";
 import { buildDashboard, type SocietyData } from "../../../lib/core/summary";
 import { buildFacts, ruleBasedSummary } from "../../../lib/core/insights";
 import { addMonths, localDay, localMonth, monthLabel } from "../../../lib/core/time";
-import { batchPut, getSociety, listBillsForMonth, listSocieties, loadSocietyData, putItem, type SocietyRec } from "../shared/db";
+import { batchPut, getSociety, listBillsForMonth, listSocieties, loadSocietyData, markNightlyScan, putItem, type SocietyRec } from "../shared/db";
 import { assertSocietyAdmin, type ResolverEvent } from "../shared/identity";
 import { notify } from "../shared/notify";
 import { askModel } from "../shared/ai";
@@ -27,6 +27,7 @@ export const handler = async (event: ResolverEvent<{ societyId: string; task: Ta
     const firstOfMonth = localDay(new Date(), tz).endsWith("-01");
     try {
       results.push(await runTasks(society, firstOfMonth ? "all" : "leaks"));
+      await markNightlyScan(society.societyId);
     } catch (err) {
       console.error(`analysis failed for ${society.societyId}`, err);
     }
@@ -80,15 +81,16 @@ async function runInsights(society: SocietyRec, data: SocietyData, month: string
     buildFacts(dash, { societyName: society.name, openAlerts }),
     `Write the monthly water summary for ${monthLabel(month)} for the society committee in 4-5 plain-English sentences: what changed vs the previous month and why, the biggest cost driver, any leak alerts, and what to do next month (use forecastNextMonth).`
   );
-  const summaryText = ai ?? ruleBasedSummary(dash, openAlerts);
+  const summaryText = ai.text ?? ruleBasedSummary(dash, openAlerts);
+  const generatedBy = ai.text ? modelId : "rules";
   await putItem("Insight", {
     id: `${society.societyId}#${month}`,
     societyId: society.societyId,
     month,
     summaryText,
     forecast: dash.forecast ?? undefined,
-    generatedBy: ai ? modelId : "rules",
+    generatedBy,
   });
-  return { month, generatedBy: ai ? modelId : "rules", summaryText };
+  return { month, generatedBy, summaryText, ...(ai.error ? { aiError: ai.error } : {}) };
 }
 

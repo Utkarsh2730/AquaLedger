@@ -4,8 +4,20 @@
  * in lib/core can't: wrong index names, item shapes, auth checks.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Bedrock as it fails before model access is granted: the app must fall back, not break
+vi.mock("@anthropic-ai/bedrock-sdk", () => ({
+  AnthropicBedrockMantle: class {
+    messages = {
+      create: async () => {
+        throw Object.assign(new Error("You don't have access to the model with the specified model ID."), { status: 403, name: "PermissionDeniedError" });
+      },
+    };
+  },
+}));
 import { ddb } from "./shared/db";
 import { cognito } from "./shared/identity";
+import { sns } from "./shared/notify";
 import { handler as adminOps } from "./admin-ops/handler";
 import { handler as analysis } from "./analysis/handler";
 import { handler as queryApi } from "./query-api/handler";
@@ -190,6 +202,77 @@ describe("end-to-end through the Lambda handlers", () => {
     expect(tbl("BILL-table").get(bills[1].id).status).toBe("issued");
     expect(tbl("BILL-table").get(bills[2].id).status).toBe("draft");
     expect(amount0).toBeGreaterThan(1);
+  });
+
+  it("system check reports each part of the backend, with fixes", async () => {
+    const created: any = await adminOps(appsync("setupSociety", { name: "S", blocks: ["A", "B", "C", "D"], flatsPerBlock: 10, seedDemo: true }));
+    const sid = created.societyId;
+    await adminOps(appsync("inviteAdmin", { societyId: sid, email: "treasurer@example.com" }, [sid]));
+
+    process.env.ALERTS_TOPIC_ARN = "arn:aws:sns:ap-south-1:1:alerts";
+    process.env.METER_INGEST_URL = "https://meter.example/";
+    process.env.CHAT_MODEL_ID = "anthropic.claude-sonnet-5-5";
+    process.env.INSIGHT_MODEL_ID = "off";
+    vi.spyOn(sns, "send").mockImplementation(async (cmd: any) =>
+      cmd.constructor.name === "ListSubscriptionsByTopicCommand"
+        ? {
+            Subscriptions: [
+              { Protocol: "email", Endpoint: "Admin@example.com", SubscriptionArn: "arn:aws:sns:ap-south-1:1:alerts:abc" },
+              { Protocol: "email", Endpoint: "treasurer@example.com", SubscriptionArn: "PendingConfirmation" },
+            ],
+          }
+        : {}
+    );
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    try {
+      const res: any = await queryApi(appsync("systemCheck", { societyId: sid }, [sid]));
+      const by = Object.fromEntries(res.checks.map((c: any) => [c.id, c]));
+      expect(by.database.status).toBe("pass");
+      expect(by.schedule.status).toBe("warn"); // never ran yet
+      expect(by.emails).toMatchObject({ status: "warn" });
+      expect(by.emails.detail).toMatch(/Waiting for confirmation: treasurer@example.com/);
+      expect(by.meter.status).toBe("pass");
+      expect(fetchSpy.mock.calls[0][1]?.headers).toMatchObject({ "x-device-token": "system-check-invalid-token" });
+      expect(by["ai-chat"].status).toBe("fail");
+      expect(by["ai-chat"].fix).toMatch(/Model access/);
+      expect(by["ai-insights"].status).toBe("warn");
+      expect(res.overall).toBe("fail");
+      await expect(queryApi(appsync("systemCheck", { societyId: sid }, ["other"]))).rejects.toThrow(/Unauthorized/);
+
+      // chat still answers, from the rules, and says why the AI wasn't used
+      const chat: any = await queryApi(appsync("askWaterData", { societyId: sid, question: "Why did our bill go up this month?" }, [sid]));
+      expect(chat).toMatchObject({ source: "rules" });
+      expect(chat.aiError).toMatch(/403 PermissionDeniedError/);
+
+      // the scheduled run records itself, which turns the schedule check green
+      await analysis({ "detail-type": "Scheduled Event", source: "aws.scheduler" } as any);
+      expect(tbl("SOCIETY-table").get(sid).lastNightlyScanAt).toBeTruthy();
+      const again: any = await queryApi(appsync("systemCheck", { societyId: sid }, [sid]));
+      expect(again.checks.find((c: any) => c.id === "schedule").status).toBe("pass");
+    } finally {
+      delete process.env.ALERTS_TOPIC_ARN;
+      delete process.env.METER_INGEST_URL;
+      delete process.env.CHAT_MODEL_ID;
+      delete process.env.INSIGHT_MODEL_ID;
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("meter endpoint rejects oversized, implausible and stale readings", async () => {
+    const created: any = await adminOps(appsync("setupSociety", { name: "S", blocks: ["A"], flatsPerBlock: 2, seedDemo: false }));
+    const token = tbl("SOCIETY-table").get(created.societyId).deviceToken;
+    const post = (body: object | string) =>
+      meterIngest({
+        requestContext: { http: { method: "POST" } },
+        headers: { "x-device-token": token },
+        body: typeof body === "string" ? body : JSON.stringify(body),
+      } as any) as Promise<any>;
+    const base = { societyId: created.societyId, flat: "A-101", periodMinutes: 1 };
+    expect((await post("x".repeat(5000))).statusCode).toBe(413);
+    expect((await post({ ...base, litres: 5000 })).statusCode).toBe(400);
+    expect((await post({ ...base, litres: 3, timestamp: "2020-01-01T00:00:00Z" })).statusCode).toBe(400);
+    expect((await post({ ...base, litres: 3, timestamp: new Date(Date.now() + 3_600_000).toISOString() })).statusCode).toBe(400);
+    expect((await post({ ...base, litres: 0.5 })).statusCode).toBe(200);
   });
 
   it("raises a live alert from the meter ingest URL when a tap is left open", async () => {

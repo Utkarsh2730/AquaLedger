@@ -31,6 +31,7 @@ export type TypeName = keyof typeof T;
 
 export interface SocietyRec {
   societyId: string;
+  lastNightlyScanAt?: string;
   name: string;
   city?: string;
   flatCount?: number;
@@ -152,6 +153,17 @@ export async function loadSocietyData(societyId: string, days = 200): Promise<So
     listAlerts(societyId, new Date(Date.now() - 90 * 86_400_000).toISOString()),
   ]);
   return { societyId, flats, readings, tankers, supplies, alerts };
+}
+
+export async function markNightlyScan(societyId: string, at = new Date().toISOString()) {
+  await ddb.send(
+    new UpdateCommand({
+      TableName: T.Society,
+      Key: { societyId },
+      UpdateExpression: "SET lastNightlyScanAt = :t, updatedAt = :t",
+      ExpressionAttributeValues: { ":t": at },
+    })
+  );
 }
 
 export async function updateFlatResident(flatId: string, email: string) {

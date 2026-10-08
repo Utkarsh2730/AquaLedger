@@ -64,7 +64,7 @@ npx ampx sandbox            # deploys the backend to your account and writes amp
 npm run dev                 # http://localhost:3000
 ```
 
-**Option B — Amplify Hosting (live URL for judges)**
+**Option B — Amplify Hosting (live URL for judges).** Full steps, settings and the AI setup are in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 1. Push this repo to GitHub.
 2. AWS console → Amplify → *Create new app* → GitHub → pick the repo and branch.

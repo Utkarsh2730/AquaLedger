@@ -15,6 +15,8 @@ import { notify } from "../shared/notify";
  */
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   if (event.requestContext.http.method === "OPTIONS") return { statusCode: 204 };
+  // public endpoint: reject anything that can't be a meter reading before touching the database
+  if ((event.body?.length ?? 0) > 4096) return json(413, { error: "Request too large" });
   try {
     const body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body ?? "", "base64").toString() : event.body ?? "{}");
     const { societyId, flat: label, litres } = body;
@@ -23,7 +25,16 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       return json(400, { error: "Expected { societyId, flat, litres, periodMinutes? }" });
     }
 
-    const society = await getSociety(societyId);
+    // no household tap or burst pipe delivers more than ~200 L/min through a domestic meter
+    if (Number(litres) / periodMinutes > 200) return json(400, { error: "Implausible flow rate" });
+    if (body.timestamp !== undefined) {
+      const t = Date.parse(body.timestamp);
+      if (Number.isNaN(t) || t > Date.now() + 5 * 60_000 || t < Date.now() - 24 * 3_600_000) {
+        return json(400, { error: "timestamp must be a valid time within the last 24 hours" });
+      }
+    }
+
+    const society = await getSociety(String(societyId));
     const token = event.headers["x-device-token"] ?? "";
     if (!society?.deviceToken || !safeEqual(token, society.deviceToken)) return json(401, { error: "Bad device token" });
 

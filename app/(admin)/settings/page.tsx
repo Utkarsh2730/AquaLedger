@@ -5,6 +5,7 @@ import { client, unwrap } from "@/lib/client";
 import type { Schema } from "@/amplify/data/resource";
 import { useSociety } from "@/components/SocietyContext";
 import { Button, Card, ErrorBox, Field, Input, PageHeader, Spinner } from "@/components/ui";
+import SystemCheck from "@/components/SystemCheck";
 
 type Society = Schema["Society"]["type"];
 
@@ -69,6 +70,7 @@ export default function SettingsPage() {
     <div className="max-w-2xl space-y-6">
       <PageHeader title="Settings" />
       <ErrorBox error={error} />
+      <SystemCheck societyId={societyId} />
       {msg && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{msg}</div>}
       <Card title="Society">
         <form onSubmit={save} className="space-y-4">

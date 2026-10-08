@@ -180,9 +180,11 @@ async function inviteResident(societyId: string, flatId: string, rawEmail: strin
 }
 
 async function importCsv(societyId: string, csv: string) {
+  if (csv.length > 1_500_000) throw new Error("CSV too large: upload at most ~1.5 MB (one month for a large society) at a time");
   const society = await getSociety(societyId);
   const flats = await listFlats(societyId);
   const { rows, errors } = parseReadingsCsv(csv, flats, society?.tzOffsetMinutes ?? 330);
+  if (rows.length > 50_000) throw new Error(`CSV has ${rows.length} readings; upload at most 50,000 at a time`);
   await batchPut(
     "Reading",
     rows.map((r) => ({ id: randomUUID(), societyId, source: "csv", ...r }))

@@ -3,6 +3,7 @@ import { Duration, Stack } from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sns from "aws-cdk-lib/aws-sns";
+import * as budgets from "aws-cdk-lib/aws-budgets";
 import { auth } from "./auth/resource";
 import { data } from "./data/resource";
 import { adminOps } from "./functions/admin-ops/resource";
@@ -68,6 +69,8 @@ fns.adminOps.addToRolePolicy(
 );
 fns.adminOps.addToRolePolicy(new iam.PolicyStatement({ actions: ["sns:Subscribe"], resources: [alertsTopic.topicArn] }));
 fns.queryApi.addToRolePolicy(new iam.PolicyStatement({ actions: ["cognito-idp:AdminGetUser"], resources: [userPool.userPoolArn] }));
+// System check: see whether admins have confirmed their alert-email subscriptions
+fns.queryApi.addToRolePolicy(new iam.PolicyStatement({ actions: ["sns:ListSubscriptionsByTopic"], resources: [alertsTopic.topicArn] }));
 
 // Optional Bedrock access. Unused (and free) unless INSIGHT_MODEL_ID / CHAT_MODEL_ID are set.
 for (const fn of [fns.analysis, fns.queryApi]) {
@@ -89,9 +92,31 @@ const ingestUrl = fns.meterIngest.addFunctionUrl({
     maxAge: Duration.hours(1),
   },
 });
+// System check probes the endpoint with a bad token and expects a 401
+fns.queryApi.addEnvironment("METER_INGEST_URL", ingestUrl.url);
+
 // No reserved concurrency here: new accounts have a 10-execution limit and AWS rejects any
 // reservation that leaves fewer than 10 unreserved. A bad device token is rejected before any
 // database write, and Lambda's free tier covers 1M requests a month.
+
+// Optional spending alarm (AWS Budgets: the first two budgets are free). Set AQUALEDGER_BUDGET_EMAIL
+// (and optionally AQUALEDGER_BUDGET_USD, default 10) before deploying to get an email at 80% and 100%.
+const budgetEmail = process.env.AQUALEDGER_BUDGET_EMAIL?.trim();
+if (budgetEmail) {
+  const budgetStack = backend.createStack("budget");
+  new budgets.CfnBudget(budgetStack, "MonthlyCostBudget", {
+    budget: {
+      budgetName: `aqualedger-${budgetStack.stackName}`.slice(0, 100),
+      budgetType: "COST",
+      timeUnit: "MONTHLY",
+      budgetLimit: { amount: Number(process.env.AQUALEDGER_BUDGET_USD || 10), unit: "USD" },
+    },
+    notificationsWithSubscribers: [80, 100].map((threshold) => ({
+      notification: { notificationType: "ACTUAL", comparisonOperator: "GREATER_THAN", threshold, thresholdType: "PERCENTAGE" },
+      subscribers: [{ subscriptionType: "EMAIL", address: budgetEmail }],
+    })),
+  });
+}
 
 backend.addOutput({
   custom: {

@@ -21,7 +21,8 @@ cent at hackathon scale.** Nothing is always-on, and nothing bills by the hour.
 | Lambda Function URL | Smart-meter ingest endpoint | No charge beyond Lambda | — |
 | Amplify Hosting | Static Next.js export + CI/CD | Credits / 12-month free tier (1,000 build min, 15 GB served) | A few builds |
 | CloudWatch Logs | Lambda logs | Always free: 5 GB ingest | Well under 1 GB |
-| **Bedrock** (optional) | AI monthly summary + "Ask your water data" chat | **Not free** — draws from credits | Off by default |
+| **Bedrock** | AI monthly summary + "Ask your water data" chat | **Not free**: draws from credits | On once model access is granted; well under ₹1 per answer. Set the models to `off` for $0 |
+| AWS Budgets (optional) | Spending alarm at 80% / 100% of a monthly limit | First 2 budgets free | Set `AQUALEDGER_BUDGET_EMAIL` |
 
 ## Roadmap services this build swaps out (and why)
 
@@ -32,17 +33,18 @@ cent at hackathon scale.** Nothing is always-on, and nothing bills by the hour.
 | SES emails | SNS email subscriptions with a `societyId` filter policy | SES starts in sandbox (verified recipients only) and is not always-free; SNS email is. Admins confirm one AWS email at sign-up. |
 | SNS SMS | Email only | SMS is billed per message in every region. |
 | IoT Core MQTT + rule | Lambda Function URL + device token header (Python simulator *and* an in-browser virtual meter) | Same live demo, no certificates or IoT policies. The roadmap's cut line says it "looks identical in the demo". A request with a wrong token is rejected before anything is written. |
-| Bedrock always on | Rule-based summaries + keyword chat by default; Claude on Bedrock is one setting away | Bedrock is the only service with a real per-call cost. |
+| Bedrock always on | Claude on Bedrock when model access is granted, with automatic fallback to free rule-based answers; `off` switches it off entirely | Bedrock is the only service with a real per-call cost, and the demo must never break. |
 | Next.js SSR on Amplify | Static export (`output: "export"`) | Every page is client-rendered against AppSync anyway; static hosting has no compute charge. |
 
-## Turning on Claude via Bedrock (optional, uses credits)
+## Claude via Bedrock (uses credits)
 
-1. In the Bedrock console for your region, enable access to the Anthropic models.
-2. Set the model ids in the function resources and redeploy:
-   - `amplify/functions/analysis/resource.ts` → `INSIGHT_MODEL_ID: "anthropic.claude-haiku-5-5"` (monthly summary, once per society per month)
-   - `amplify/functions/query-api/resource.ts` → `CHAT_MODEL_ID: "anthropic.claude-sonnet-5-5"` (live chat)
-3. The functions already have IAM permission. If a call fails or is refused, the app silently
-   falls back to the rule-based answer, so the demo never breaks.
+On by default: Claude Haiku writes the monthly summary, Claude Sonnet answers chat. Grant model
+access once in the Bedrock console (see [DEPLOY.md](DEPLOY.md#3-turning-on-the-ai-claude-on-amazon-bedrock));
+until then, and on any error, the app falls back to the rule-based answers and **Settings → System
+check** shows why. Set `AQUALEDGER_CHAT_MODEL=off` and `AQUALEDGER_INSIGHT_MODEL=off` for a $0 build.
+
+Other cost guards: Lambdas run on ARM (about 20% cheaper), logs expire after a month, and
+`AQUALEDGER_BUDGET_EMAIL` adds a free AWS Budgets alarm.
 
 The model only ever sees a compact facts object (~1-2k tokens: monthly totals, costs, top flats,
 open alerts, forecast), never raw readings, so each chat answer costs a fraction of a rupee.

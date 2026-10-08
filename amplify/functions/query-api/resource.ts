@@ -1,4 +1,5 @@
 import { defineFunction } from "@aws-amplify/backend";
+import { AI_ENV, LAMBDA_DEFAULTS } from "../shared/config";
 
 export const queryApi = defineFunction({
   name: "query-api",
@@ -6,9 +7,6 @@ export const queryApi = defineFunction({
   timeoutSeconds: 30,
   memoryMB: 1024,
   resourceGroupName: "data",
-  environment: {
-    // Set to a Bedrock model id (e.g. "anthropic.claude-sonnet-5-5") to answer chat with AI.
-    // Empty = free rule-based answers.
-    CHAT_MODEL_ID: "",
-  },
+  environment: { CHAT_MODEL_ID: AI_ENV.CHAT_MODEL_ID, BEDROCK_REGION: AI_ENV.BEDROCK_REGION },
+  ...LAMBDA_DEFAULTS,
 });

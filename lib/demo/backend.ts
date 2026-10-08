@@ -273,6 +273,26 @@ export const demoClient = {
       const answer = ruleBasedAnswer(question, buildDashboard(data, new Date(), TZ), data.alerts.filter((a) => !a.resolved).map((a) => a.message));
       return ok({ answer, source: "rules" });
     },
+    systemCheck: async () => {
+      ensure();
+      await pause();
+      const flats = db.Flat.size;
+      const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+      const recent = [...db.Reading.values()].filter((r) => r.timestamp >= weekAgo).length;
+      return ok({
+        checkedAt: now(),
+        region: "offline demo",
+        overall: "warn",
+        checks: [
+          { id: "database", name: "Database", status: "pass", detail: `${flats} flats; ${recent.toLocaleString("en-IN")} readings in the last 7 days (in this browser).` },
+          { id: "schedule", name: "Nightly leak scan", status: "warn", detail: "Demo mode has no scheduler.", fix: "Use “Run analysis now” on the dashboard." },
+          { id: "emails", name: "Alert emails", status: "warn", detail: "Demo mode doesn't send email." },
+          { id: "meter", name: "Smart-meter endpoint", status: "pass", detail: "Simulated in the browser (Live meters page)." },
+          { id: "ai-chat", name: "AI answers (chat)", status: "warn", detail: "Demo mode uses the free rule-based answers." },
+          { id: "ai-insights", name: "AI monthly summaries", status: "warn", detail: "Demo mode uses the free rule-based summaries." },
+        ],
+      });
+    },
     myResidentPortal: async () => {
       const society = ensure();
       await pause();

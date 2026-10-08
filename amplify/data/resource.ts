@@ -31,6 +31,8 @@ const schema = a
         /** shared secret the meter simulator sends to the ingest URL */
         deviceToken: a.string(),
         adminEmails: a.string().array(),
+        /** set by the scheduled job each night; the System check uses it to prove the schedule runs */
+        lastNightlyScanAt: a.datetime(),
       })
       .identifier(["societyId"])
       .authorization((allow) => [allow.groupDefinedIn("societyId")]),
@@ -199,6 +201,13 @@ const schema = a
     askWaterData: a
       .query()
       .arguments({ societyId: a.id().required(), question: a.string().required() })
+      .returns(a.json())
+      .authorization((allow) => [allow.authenticated()])
+      .handler(a.handler.function(queryApi)),
+
+    systemCheck: a
+      .query()
+      .arguments({ societyId: a.id().required() })
       .returns(a.json())
       .authorization((allow) => [allow.authenticated()])
       .handler(a.handler.function(queryApi)),

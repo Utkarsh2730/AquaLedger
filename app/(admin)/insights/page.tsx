@@ -13,6 +13,7 @@ interface Msg {
   role: "user" | "assistant";
   text: string;
   source?: string;
+  aiError?: string;
 }
 
 const SUGGESTIONS = ["Why did our bill go up this month?", "How many tankers do we need next month?", "Which flats use the most water?", "Are there any leaks?"];
@@ -63,8 +64,8 @@ export default function InsightsPage() {
     setQuestion("");
     setAsking(true);
     try {
-      const res = unwrap<{ answer: string; source: string }>(await client.queries.askWaterData({ societyId, question: q }));
-      setMessages((m) => [...m, { role: "assistant", text: res.answer, source: res.source }]);
+      const res = unwrap<{ answer: string; source: string; aiError?: string }>(await client.queries.askWaterData({ societyId, question: q }));
+      setMessages((m) => [...m, { role: "assistant", text: res.answer, source: res.source, aiError: res.aiError }]);
     } catch (err) {
       setMessages((m) => [...m, { role: "assistant", text: err instanceof Error ? err.message : "Something went wrong" }]);
     } finally {
@@ -115,7 +116,11 @@ export default function InsightsPage() {
                   <div className={`inline-block max-w-[90%] rounded-2xl px-4 py-2 text-sm ${m.role === "user" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-800"}`}>
                     {m.text}
                   </div>
-                  {m.source && <div className="mt-0.5 text-[10px] text-slate-400">{m.source === "bedrock" ? "answered by Claude on Bedrock" : "rule-based answer (AI off)"}</div>}
+                  {m.source && (
+                    <div className="mt-0.5 text-[10px] text-slate-400" title={m.aiError}>
+                      {m.source === "bedrock" ? "answered by Claude on Bedrock" : m.aiError ? "rule-based answer (AI unavailable, see Settings → System check)" : "rule-based answer (AI off)"}
+                    </div>
+                  )}
                 </div>
               ))}
               {asking && <div className="text-sm text-slate-400">Thinking…</div>}
