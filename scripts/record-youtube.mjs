@@ -9,7 +9,7 @@
  * for Playwright (or CHROMIUM_PATH).
  */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { spawn, execFileSync } from "node:child_process";
+import { spawn, spawnSync, execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright";
@@ -174,15 +174,13 @@ const awsCard = () =>
 // ── intro ────────────────────────────────────────────────────────────────────────────────────
 await page.goto(B + "/", { waitUntil: "networkidle" });
 await startCast();
-mark("Intro");
+mark("Intro: the problem and AquaLedger");
 await page.setContent(titleCard("Every litre. Every rupee. Every leak.", "Water management for apartment societies: track supply, catch leaks, bill each flat fairly, plan tankers.", "AquaLedger · product demo"));
 await sleep(5000);
-mark("The problem");
 await page.setContent(problemCard());
 await sleep(8500);
 
 // ── landing page ─────────────────────────────────────────────────────────────────────────────
-mark("Meet AquaLedger");
 await page.goto(B + "/", { waitUntil: "networkidle" });
 await sleep(400);
 await cap(null, "AquaLedger: one place for the committee to run the society's water.");
@@ -305,10 +303,9 @@ await sleep(5500);
 await cap(null, null);
 
 // ── architecture + outro ─────────────────────────────────────────────────────────────────────
-mark("How it's built on AWS");
+mark("Built on AWS, and pricing");
 await page.setContent(awsCard());
 await sleep(8000);
-mark("Pricing and wrap-up");
 await page.setContent(titleCard("It pays for itself with one leak.", "₹10–15 per flat per month. Catch leaks, end equal-split disputes, and plan tankers before summer.", "AquaLedger · water management for apartment societies"));
 await sleep(6500);
 
@@ -329,7 +326,7 @@ await shotPage.setContent(`<!doctype html><html><head><meta charset="utf-8"><sty
   h1 em{font-style:normal;color:#22d3ee} .tag{margin-top:26px;display:inline-block;padding:12px 20px;border-radius:14px;background:#f43f5e;font-size:30px;font-weight:800}
   </style></head><body><img src="data:image/jpeg;base64,${dash}"><div class="fade"></div>
   <div class="txt"><div class="logo">💧 AquaLedger</div><h1>Catch leaks.<br><em>Bill fairly.</em></h1><div class="tag">Water app for societies</div></div></body></html>`);
-await shotPage.screenshot({ path: `${OUT_DIR}/thumbnail.jpg`, type: "jpeg", quality: 92 });
+await shotPage.screenshot({ path: `${FRAMES}/thumbnail-hidpi.jpg`, type: "jpeg", quality: 95 });
 await shotPage.close();
 
 await cdp.send("Page.stopScreencast").catch(() => {});
@@ -366,12 +363,39 @@ execFileSync(
   { stdio: "inherit" }
 );
 
-// YouTube chapters: first must be 0:00, each at least 10 s apart
+// YouTube's thumbnail size: 1280×720
+execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", `${FRAMES}/thumbnail-hidpi.jpg`, "-vf", "scale=1280:720:flags=lanczos", "-q:v", "2", `${OUT_DIR}/thumbnail.jpg`], { stdio: "inherit" });
+
+// YouTube chapters: first must be 0:00, each at least 10 s. Every chapter opens on a dark title card,
+// so the exact start times are read from the finished video (frames arrive slightly after they're
+// drawn, which makes marks taken during recording a little early).
 const ts = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const marked = chapters.map((c) => frames[Math.min(c.frame, frames.length - 1)].t - t0);
+// signalstats prints to stderr
+const stats = spawnSync(
+  "ffmpeg",
+  ["-hide_banner", "-i", `${OUT_DIR}/aqualedger-demo.mp4`, "-vf", "fps=4,scale=160:90,signalstats,metadata=print:key=lavfi.signalstats.YAVG", "-f", "null", "-"],
+  { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }
+).stderr;
+const darkStarts = [];
+let wasDark = false;
+let pts = 0;
+for (const line of stats.split(/[\r\n]/)) {
+  const p = line.match(/pts_time:([0-9.]+)/);
+  if (p) pts = Number(p[1]);
+  const y = line.match(/YAVG=([0-9.]+)/);
+  if (!y) continue;
+  const dark = Number(y[1]) < 60;
+  if (dark && !wasDark) darkStarts.push(pts);
+  wasDark = dark;
+}
+// match each mark to the dark card starting closest to it
+const nearestCard = (m) => darkStarts.filter((d) => Math.abs(d - m) < 4).sort((a, b) => Math.abs(a - m) - Math.abs(b - m))[0] ?? m;
+const starts = marked.map((m, i) => (i === 0 ? 0 : nearestCard(m)));
 const chapterLines = chapters
-  .map((c) => ({ ...c, s: (frames[Math.min(c.frame, frames.length - 1)].t - t0) }))
-  .filter((c, i, all) => i === 0 || c.s - all[i - 1].s >= 10)
-  .map((c, i) => `${ts(i === 0 ? 0 : c.s)} ${c.title}`);
+  .map((c, i) => ({ ...c, s: starts[i] }))
+  .reduce((kept, c) => (kept.length === 0 || c.s - kept.at(-1).s >= 10 ? [...kept, c] : kept), [])
+  .map((c) => `${ts(c.s)} ${c.title}`);
 const description = `AquaLedger is a water management app for apartment societies. It tracks every litre from municipal supply, borewells and tankers, catches leaks automatically, bills each flat by actual usage, and forecasts how many tankers next month needs.
 
 In this demo:
