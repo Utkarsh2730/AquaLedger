@@ -81,7 +81,7 @@ function Portal() {
 export default function ResidentPage() {
   return (
     <BackendGate>
-      <AuthGate hideSignUp>
+      <AuthGate resident>
         <DemoBanner />
         <Portal />
       </AuthGate>
