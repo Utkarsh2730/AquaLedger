@@ -3,7 +3,7 @@
 import { useRef } from "react";
 
 /**
- * "Watch demo" button for the nav bar: opens the 75-second product tour (public/video,
+ * "Watch demo" button for the nav bar: opens the 90-second product tour (public/video,
  * recorded from demo mode with on-screen captions) in a pop-up player. It plays with sound
  * and controls because the visitor asked for it; closing pauses it. Esc or a click outside
  * the player closes it. Re-record the video after UI changes with `npm run record:tour`.
@@ -45,7 +45,7 @@ export default function TourVideo() {
       >
         <div className="mb-3 flex items-center justify-between gap-4 text-white">
           <div>
-            <div className="font-semibold">How AquaLedger works · 75 seconds</div>
+            <div className="font-semibold">How AquaLedger works · 90 seconds</div>
             <div className="text-sm text-slate-300">Dashboard → leak caught overnight → fair bills → tanker forecast → live alert</div>
           </div>
           <button type="button" onClick={close} className="shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium text-white ring-1 ring-white/30 hover:bg-white/10" aria-label="Close video">

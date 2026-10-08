@@ -1,5 +1,5 @@
 /**
- * Records the 75-second product tour shown on the landing page (public/video/).
+ * Records the ~90-second product tour shown on the landing page (public/video/).
  *
  *   npm run record:tour
  *
@@ -107,7 +107,7 @@ const card = (title, sub, foot) => `<!doctype html><html><head><meta charset="ut
 // 0 · intro
 await page.goto(B + "/", { waitUntil: "networkidle" });
 await startCast();
-await page.setContent(card("Every litre. Every rupee. Every leak.", "How an apartment society tracks its water, catches leaks and bills each flat fairly.", "A 75-second tour"));
+await page.setContent(card("Every litre. Every rupee. Every leak.", "How an apartment society tracks its water, catches leaks and bills each flat fairly.", "A 90-second tour"));
 await sleep(4200);
 
 // 1 · dashboard
@@ -177,6 +177,25 @@ await moveTo(page.getByText("is drawing").first());
 await sleep(5200);
 await click(page.getByRole("button", { name: /Stop meter/ }));
 await cap(null, null);
+
+// 7 · residents
+await click(page.getByRole("link", { name: /Flats & residents/ }));
+await page.getByRole("button", { name: "Give access to all flats" }).waitFor();
+await cap("7", "Residents don't sign up. The committee gives every flat an access code…");
+await sleep(2200);
+page.once("dialog", (d) => d.accept());
+await click(page.getByRole("button", { name: "Give access to all flats" }));
+await page.getByText(/Access codes for \d+ flats/).first().waitFor();
+await sleep(600);
+await moveTo(page.getByText(/Access codes for \d+ flats/).first());
+await cap("7", "…in one click, sent by email or WhatsApp, or printed as slips.");
+await sleep(4200);
+const row = page.locator("#access-sheet tr").first();
+const residentUrl = (await row.locator("td").nth(2).innerText()).trim();
+await page.goto(residentUrl.replace(/^https?:\/\/[^/]+/, B), { waitUntil: "networkidle" });
+await page.getByText("Daily use vs building average").first().waitFor();
+await cap("7", "The resident opens the link and sees only their flat: usage and bills.");
+await sleep(4800);
 
 // outro
 await page.setContent(card("Set up your society in a minute.", "Catch leaks, end equal-split disputes and plan tankers before summer.", "Serverless on AWS · ₹10-15 per flat per month"));
