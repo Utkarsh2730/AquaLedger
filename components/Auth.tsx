@@ -28,7 +28,7 @@ export const useSession = DEMO ? useDemoSession : useCognitoSession;
 export function DemoBanner() {
   if (!DEMO) return null;
   return (
-    <div className="no-print bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900">
+    <div id="demo-banner" className="no-print bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900">
       Offline demo mode · no AWS needed · data is kept in this browser (Settings → Reset demo data to start over)
     </div>
   );

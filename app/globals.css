@@ -18,3 +18,16 @@ body {
   .no-print { display: none !important; }
   body { background: white; }
 }
+
+/* landing page motion */
+@keyframes al-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes al-drip { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(46px); opacity: 0; } }
+@keyframes al-pulse { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.7); opacity: 0; } }
+@keyframes al-flow { to { stroke-dashoffset: -32; } }
+.al-float { animation: al-float 6s ease-in-out infinite; }
+.al-drip { animation: al-drip 1.8s ease-in infinite; }
+.al-pulse { animation: al-pulse 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.al-flow { animation: al-flow 1.2s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .al-float, .al-drip, .al-pulse, .al-flow { animation: none; }
+}

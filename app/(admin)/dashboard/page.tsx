@@ -141,7 +141,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Where the water comes from (monthly)" className="lg:col-span-2">
-          <SourceMixChart data={d.monthly} />
+          <SourceMixChart data={d.monthly} currentMonth={d.currentMonth} />
         </Card>
         <Card title="Cost per kL by source">
           <div className="space-y-3">
@@ -169,7 +169,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Spend by source" className="lg:col-span-2">
-          <CostChart data={d.monthly} />
+          <CostChart data={d.monthly} currentMonth={d.currentMonth} />
         </Card>
         <Card title={d.forecast ? `Forecast · ${monthLabel(d.forecast.month)}` : "Forecast"} action={<Link href="/insights" className="text-xs text-brand-700 underline">Details</Link>}>
           {d.forecast ? (

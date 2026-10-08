@@ -52,7 +52,7 @@ const db = {
 };
 type Table = Exclude<keyof typeof db, "society" | "seedParams">;
 
-function reset(name = "Green Meadows CHS (demo)", city = "Pune", blocks = ["A", "B", "C", "D"], perBlock = 10, commonCharge = 150) {
+function reset(name = "Green Meadows CHS", city = "Pune", blocks = ["A", "B", "C", "D"], perBlock = 10, commonCharge = 150, save = true) {
   for (const t of ["Flat", "Reading", "TankerDelivery", "SourceSupply", "Bill", "Alert", "Insight"] as Table[]) db[t].clear();
   const seed = generateSeed({ societyId: DEMO_SOCIETY_ID, blocks, flatsPerBlock: perBlock });
   db.seedParams = { blocks, perBlock };
@@ -72,7 +72,7 @@ function reset(name = "Green Meadows CHS (demo)", city = "Pune", blocks = ["A", 
     adminEmails: [DEMO_EMAIL],
   });
   const leak = seed.flats.find((f) => f.id === seed.leakFlatId)!;
-  persist();
+  if (save) persist();
   return { seeded: true, flats: seed.flats.length, readings: seed.readings.length, tankers: seed.tankers.length, leakFlat: flatLabel(leak) };
 }
 
@@ -100,7 +100,8 @@ function restore(): boolean {
     if (!raw) return false;
     const state = JSON.parse(raw);
     const s: Society = state.society;
-    reset(s.name, s.city, state.seedParams.blocks, state.seedParams.perBlock, s.commonCharge);
+    // rebuild seed readings without saving, or the fresh state would overwrite what we're restoring
+    reset(s.name, s.city, state.seedParams.blocks, state.seedParams.perBlock, s.commonCharge, false);
     db.society = s;
     for (const t of SAVED) {
       db[t].clear();

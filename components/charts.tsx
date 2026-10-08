@@ -20,13 +20,15 @@ import { monthLabel } from "@/lib/core/time";
 const C = { municipal: "#0891b2", borewell: "#65a30d", tanker: "#f59e0b", consumed: "#0f172a", flat: "#0891b2", avg: "#94a3b8" };
 const klTick = (v: number) => `${Math.round(v / 1000)}k`;
 const short = (m: string) => monthLabel(m).replace(/ 20/, " '");
+/** the current month is only partly metered: say so instead of letting it look like a collapse */
+const monthTick = (current?: string) => (m: string) => (m === current ? `${short(m)} (so far)` : short(m));
 
-export function SourceMixChart({ data }: { data: { month: string; municipalLitres: number; borewellLitres: number; tankerLitres: number; consumedLitres: number }[] }) {
+export function SourceMixChart({ data, currentMonth }: { data: { month: string; municipalLitres: number; borewellLitres: number; tankerLitres: number; consumedLitres: number }[]; currentMonth?: string }) {
   return (
     <ResponsiveContainer width="100%" height={280}>
       <ComposedChart data={data}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="month" tickFormatter={short} fontSize={12} />
+        <XAxis dataKey="month" tickFormatter={monthTick(currentMonth)} fontSize={12} />
         <YAxis tickFormatter={klTick} fontSize={12} width={40} />
         <Tooltip formatter={(v) => `${Math.round(Number(v) / 1000).toLocaleString("en-IN")} kL`} labelFormatter={(m) => monthLabel(String(m))} />
         <Legend />
@@ -39,12 +41,12 @@ export function SourceMixChart({ data }: { data: { month: string; municipalLitre
   );
 }
 
-export function CostChart({ data }: { data: { month: string; municipalCost: number; borewellCost: number; tankerCost: number }[] }) {
+export function CostChart({ data, currentMonth }: { data: { month: string; municipalCost: number; borewellCost: number; tankerCost: number }[]; currentMonth?: string }) {
   return (
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="month" tickFormatter={short} fontSize={12} />
+        <XAxis dataKey="month" tickFormatter={monthTick(currentMonth)} fontSize={12} />
         <YAxis tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} fontSize={12} width={48} />
         <Tooltip formatter={(v) => `₹${Math.round(Number(v)).toLocaleString("en-IN")}`} labelFormatter={(m) => monthLabel(String(m))} />
         <Legend />
