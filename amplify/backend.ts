@@ -46,6 +46,14 @@ for (const fn of Object.values(fns)) {
     fn.addEnvironment(envName, tables[model].tableName);
     tables[model].grantReadWriteData(fn);
   }
+  // Amplify exposes the model tables as imported tables, so grantReadWriteData only covers the
+  // table itself. The handlers query the secondary indexes, which need their own ARNs.
+  fn.addToRolePolicy(
+    new iam.PolicyStatement({
+      actions: ["dynamodb:Query"],
+      resources: Object.values(tableEnv).map((model) => `${tables[model].tableArn}/index/*`),
+    })
+  );
   fn.addEnvironment("USER_POOL_ID", userPool.userPoolId);
   fn.addEnvironment("ALERTS_TOPIC_ARN", alertsTopic.topicArn);
   alertsTopic.grantPublish(fn);
