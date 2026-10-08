@@ -15,6 +15,7 @@ export interface FlatRec {
   accessCodeHash?: string | null;
   accessIssuedAt?: string | null;
   residentEmails?: (string | null)[] | null;
+  residentPhones?: (string | null)[] | null;
 }
 
 export interface ReadingRec {

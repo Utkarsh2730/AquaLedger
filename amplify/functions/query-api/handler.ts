@@ -6,6 +6,7 @@ import { findFlatByAccessHash, getSociety, listFlats, listReadings, loadSocietyD
 import { assertSocietyAdmin, type ResolverEvent } from "../shared/identity";
 import { aiEnabled, askModel, pingModel } from "../shared/ai";
 import { mailStatus } from "../shared/mail";
+import { whatsappStatus } from "../shared/whatsapp";
 import { subscriptionStatus } from "../shared/notify";
 
 type Args = Record<string, any>;
@@ -187,6 +188,29 @@ async function systemCheck(societyId: string) {
         };
       }
       return { status: "pass", detail: `Sending from ${sender}; ${m.sent24h ?? 0} of ${m.max24h ?? "?"} emails used in the last 24 h.` };
+    }),
+
+    check("resident-whatsapp", "Resident WhatsApp", async () => {
+      if (!process.env.WHATSAPP_PHONE_ID) {
+        return {
+          status: "pass",
+          detail: "One-tap mode: the committee sends each flat's login from its own WhatsApp. Free, nothing to set up.",
+          fix: "Optional: to send automatically, link a WhatsApp Business number in AWS End User Messaging Social and set AQUALEDGER_WHATSAPP_PHONE_ID (see docs/DEPLOY.md).",
+        };
+      }
+      const w = await whatsappStatus();
+      const from = `Sending from ${w.number ?? "your WhatsApp Business number"}`;
+      if (w.status === "APPROVED") return { status: "pass", detail: `${from} with the approved “${w.template}” template.` };
+      if (w.status === "REJECTED") {
+        return { status: "fail", detail: `${from}, but Meta rejected the “${w.template}” template.`, fix: "Open the template in AWS End User Messaging Social → WhatsApp → Message templates to see why, edit it, and resubmit." };
+      }
+      return {
+        status: "warn",
+        detail: w.submitted
+          ? `${from}. Submitted the “${w.template}” message template to Meta for review just now.`
+          : `${from}. The “${w.template}” template is ${String(w.status).toLowerCase()} with Meta.`,
+        fix: "Meta usually reviews templates within minutes to a day. Until then, the committee's one-tap WhatsApp is used. Run the check again later.",
+      };
     }),
 
     check("meter", "Smart-meter endpoint", async () => {

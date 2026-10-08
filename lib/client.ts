@@ -53,7 +53,18 @@ export const meterIngestUrl: string | undefined = DEMO ? "demo://meter-ingest" :
 /** whether this backend can email residents (AQUALEDGER_SENDER_EMAIL was set at deploy); the demo simulates it */
 export const residentEmailEnabled: boolean = DEMO || Boolean((outputs as { custom?: { residentEmailEnabled?: boolean } }).custom?.residentEmailEnabled);
 
-export type EmailAccessResult = { flatId: string; flat: string; status: "sent" | "skipped" | "failed"; sentTo: string[]; reason?: string };
+/** whether this backend sends WhatsApp automatically (AQUALEDGER_WHATSAPP_PHONE_ID); otherwise the committee taps send per flat */
+export const residentWhatsAppEnabled: boolean = !DEMO && Boolean((outputs as { custom?: { residentWhatsAppEnabled?: boolean } }).custom?.residentWhatsAppEnabled);
+
+export type SendAccessResult = {
+  flatId: string;
+  flat: string;
+  status: "sent" | "manual" | "skipped" | "failed";
+  sentTo: string[];
+  manualPhones?: string[];
+  code?: string;
+  reason?: string;
+};
 
 /** Posts one smart-meter reading, exactly like scripts/meter_simulator.py does. */
 export async function postMeterReading(body: { societyId: string; flat: string; litres: number; periodMinutes: number }, token: string) {

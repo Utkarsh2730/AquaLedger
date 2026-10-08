@@ -19,6 +19,7 @@ cent at hackathon scale.** Nothing is always-on, and nothing bills by the hour.
 | EventBridge Scheduler | Nightly leak scan, monthly billing (1 schedule) | Always free: 14M invocations / month | 31 invocations |
 | SNS | Leak + bill emails, filtered per society | Always free: 1M publishes, 1,000 email deliveries / month | Tens of emails |
 | SES (optional) | Emails residents their login (flat + access code) | 3,000 messages / month for the first 12 months, then $0.10 per 1,000 | One email per resident when the committee sends logins. Off unless `AQUALEDGER_SENDER_EMAIL` is set |
+| End User Messaging Social (optional) | Automatic WhatsApp logins to residents | **Not free**: Meta's per-message fee + $0.005 per message | Off unless `AQUALEDGER_WHATSAPP_PHONE_ID` is set. The default one-tap WhatsApp (committee's own phone) costs nothing |
 | Lambda Function URL | Smart-meter ingest endpoint | No charge beyond Lambda | — |
 | Amplify Hosting | Static Next.js export + CI/CD | Credits / 12-month free tier (1,000 build min, 15 GB served) | A few builds |
 | CloudWatch Logs | Lambda logs | Always free: 5 GB ingest | Well under 1 GB |

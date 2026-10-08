@@ -200,9 +200,9 @@ describe("resident access codes", () => {
   });
 });
 
-import { accessEmail, parseEmailList, parseResidentEmails } from "./residents";
+import { accessEmail, normalizePhone, parseEmailList, parsePhoneList, parseResidentContacts, whatsappLink, whatsappTemplateMessage, whatsappText } from "./residents";
 
-describe("resident email import", () => {
+describe("resident contact import", () => {
   const flats = [
     { id: "f1", block: "A", number: "101" },
     { id: "f2", block: "A", number: "102" },
@@ -211,32 +211,50 @@ describe("resident email import", () => {
 
   it("reads the usual register shapes", () => {
     const csv = [
-      "Flat,Name,Email",
-      "A-101, Rahul Sharma, Rahul@Example.com",
-      "a 101,Priya,priya@example.com",
+      "Flat,Name,Email,Mobile",
+      "A-101, Rahul Sharma, Rahul@Example.com, 98765 43210",
+      "a 101,Priya,priya@example.com,+91-91234-56789",
       "A,102,owner@example.com; tenant@example.com",
       '"B/202","b202@example.com rent@example.com"',
+      "B-202,,,09811122233 / 9822233344",
       "C-901,ghost@example.com",
-      "A-102,not-an-email@",
-      "A-101,rahul@example.com",
+      "A-102,not-an-email@,12345678",
+      "A-101,rahul@example.com,9876543210",
       "",
     ].join("\n");
-    const r = parseResidentEmails(csv, flats);
-    expect(r.byFlat.get("f1")).toEqual(["rahul@example.com", "priya@example.com"]);
-    expect(r.byFlat.get("f2")).toEqual(["owner@example.com", "tenant@example.com"]);
-    expect(r.byFlat.get("f3")).toEqual(["b202@example.com", "rent@example.com"]);
+    const r = parseResidentContacts(csv, flats);
+    expect(r.byFlat.get("f1")).toEqual({ emails: ["rahul@example.com", "priya@example.com"], phones: ["+919876543210", "+919123456789"] });
+    expect(r.byFlat.get("f2")).toEqual({ emails: ["owner@example.com", "tenant@example.com"], phones: [] });
+    expect(r.byFlat.get("f3")).toEqual({ emails: ["b202@example.com", "rent@example.com"], phones: ["+919811122233", "+919822233344"] });
     expect(r.unknownFlats).toEqual(["C-901"]);
     expect(r.badEmails).toEqual(["not-an-email@"]);
+    expect(r.badPhones).toEqual(["12345678"]);
   });
 
-  it("caps emails per flat", () => {
+  it("takes mobile-only rows", () => {
+    const r = parseResidentContacts("A-102\t98765 43210", flats);
+    expect(r.byFlat.get("f2")).toEqual({ emails: [], phones: ["+919876543210"] });
+  });
+
+  it("caps contacts per flat", () => {
     const csv = Array.from({ length: 9 }, (_, i) => `A-101,r${i}@example.com`).join("\n");
-    const r = parseResidentEmails(csv, flats);
-    expect(r.byFlat.get("f1")).toHaveLength(6);
+    const r = parseResidentContacts(csv, flats);
+    expect(r.byFlat.get("f1")!.emails).toHaveLength(6);
     expect(r.truncated).toEqual(["A-101"]);
   });
 
-  it("parses a typed list", () => {
+  it("normalizes mobile numbers", () => {
+    expect(normalizePhone("98765 43210")).toBe("+919876543210");
+    expect(normalizePhone("098765-43210")).toBe("+919876543210");
+    expect(normalizePhone("919876543210")).toBe("+919876543210");
+    expect(normalizePhone("+44 7700 900123")).toBe("+447700900123");
+    expect(normalizePhone("0044 7700 900123")).toBe("+447700900123");
+    expect(normalizePhone("1234567890")).toBeNull(); // Indian mobiles start with 6-9
+    expect(normalizePhone("101")).toBeNull();
+    expect(parsePhoneList("98765 43210, 9876543210 / 12")).toEqual({ phones: ["+919876543210"], bad: ["12"] });
+  });
+
+  it("parses a typed email list", () => {
     expect(parseEmailList("A@x.com, b@y.in  a@x.com; nope")).toEqual({ emails: ["a@x.com", "b@y.in"], bad: ["nope"] });
   });
 
@@ -246,5 +264,14 @@ describe("resident email import", () => {
     expect(m.text).toContain("K7M2-QX9P-4HDR");
     expect(m.html).toContain("Green &lt;Meadows&gt;");
     expect(m.html).not.toContain("<Meadows>");
+  });
+
+  it("builds WhatsApp messages", () => {
+    const text = whatsappText({ societyName: "Green Meadows", flat: "A-101", code: "k7m2qx9p4hdr", link: "https://x.app/resident/?code=K7M2-QX9P-4HDR" });
+    expect(text).toContain("Access code: K7M2-QX9P-4HDR");
+    expect(whatsappLink("+919876543210", "hi there")).toBe("https://wa.me/919876543210?text=hi%20there");
+    const msg = whatsappTemplateMessage({ to: "+919876543210", societyName: "Green Meadows", flat: "A-101", code: "k7m2qx9p4hdr", link: "https://x" });
+    expect(msg.template.name).toBe("aqualedger_login");
+    expect(msg.template.components[0].parameters.map((p) => p.text)).toEqual(["Green Meadows", "A-101", "K7M2-QX9P-4HDR", "https://x"]);
   });
 });

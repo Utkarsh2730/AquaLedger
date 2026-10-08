@@ -48,6 +48,8 @@ const schema = a
         accessIssuedAt: a.datetime(),
         /** where the flat's access email goes (the committee's register); never shown to residents */
         residentEmails: a.email().array(),
+        /** residents' mobiles in E.164 (+919876543210), for WhatsApp; never shown to residents */
+        residentPhones: a.phone().array(),
       })
       .secondaryIndexes((index) => [
         index("societyId").name("bySociety").queryField("listFlatsBySociety"),
@@ -167,8 +169,8 @@ const schema = a
       .authorization((allow) => [allow.authenticated()])
       .handler(a.handler.function(adminOps)),
 
-    // emails each listed flat a fresh access code (the old one stops working); a few flats per call
-    emailResidentAccess: a
+    // sends each listed flat a fresh access code by email/WhatsApp (the old one stops working); a few flats per call
+    sendResidentAccess: a
       .mutation()
       .arguments({ societyId: a.id().required(), flatIds: a.id().array().required(), origin: a.string().required(), replaceExisting: a.boolean() })
       .returns(a.json())

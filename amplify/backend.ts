@@ -90,6 +90,34 @@ if (senderEmail) {
   fns.queryApi.addToRolePolicy(new iam.PolicyStatement({ actions: ["ses:GetAccount", "ses:GetEmailIdentity"], resources: ["*"] }));
 }
 
+// Automatic WhatsApp logins (AWS End User Messaging Social), switched on by AQUALEDGER_WHATSAPP_PHONE_ID:
+// the "phone-number-id-…" of a WhatsApp Business number linked in that console. Without it, the
+// committee sends WhatsApp logins from its own phone (one tap per flat), which needs no setup.
+const whatsappPhoneId = process.env.AQUALEDGER_WHATSAPP_PHONE_ID?.trim();
+if (whatsappPhoneId) {
+  const whatsappEnv: Record<string, string | undefined> = {
+    WHATSAPP_PHONE_ID: whatsappPhoneId,
+    WHATSAPP_REGION: process.env.AQUALEDGER_WHATSAPP_REGION?.trim(),
+    WHATSAPP_TEMPLATE: process.env.AQUALEDGER_WHATSAPP_TEMPLATE?.trim(),
+    WHATSAPP_LANGUAGE: process.env.AQUALEDGER_WHATSAPP_LANGUAGE?.trim(),
+  };
+  for (const fn of [fns.adminOps, fns.queryApi]) {
+    for (const [k, v] of Object.entries(whatsappEnv)) if (v) fn.addEnvironment(k, v);
+  }
+  fns.adminOps.addToRolePolicy(new iam.PolicyStatement({ actions: ["social-messaging:SendWhatsAppMessage"], resources: ["*"] }));
+  // System check: reads the number and the login template, and submits the template if it's missing
+  fns.queryApi.addToRolePolicy(
+    new iam.PolicyStatement({
+      actions: [
+        "social-messaging:GetLinkedWhatsAppBusinessAccountPhoneNumber",
+        "social-messaging:ListWhatsAppMessageTemplates",
+        "social-messaging:CreateWhatsAppMessageTemplate",
+      ],
+      resources: ["*"],
+    })
+  );
+}
+
 // Optional Bedrock access. Unused (and free) unless INSIGHT_MODEL_ID / CHAT_MODEL_ID are set.
 for (const fn of [fns.analysis, fns.queryApi]) {
   fn.addToRolePolicy(
@@ -141,5 +169,6 @@ backend.addOutput({
     meterIngestUrl: ingestUrl.url,
     alertsTopicArn: alertsTopic.topicArn,
     residentEmailEnabled: Boolean(senderEmail),
+    residentWhatsAppEnabled: Boolean(whatsappPhoneId),
   },
 });

@@ -1,38 +1,49 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { client, DEMO, flatLabelOf, fmtDateTime, residentEmailEnabled, unwrap, type EmailAccessResult, type FlatModel } from "@/lib/client";
+import { client, DEMO, flatLabelOf, fmtDateTime, residentEmailEnabled, residentWhatsAppEnabled, unwrap, type FlatModel, type SendAccessResult } from "@/lib/client";
 import { residentLink } from "@/lib/core/access";
-import { parseEmailList } from "@/lib/core/residents";
+import { formatPhone, parseEmailList, parsePhoneList, whatsappLink, whatsappText } from "@/lib/core/residents";
 import { Button, ErrorBox } from "./ui";
 
+const listOf = (v: (string | null)[] | null | undefined) => (v ?? []).filter(Boolean) as string[];
+
 /**
- * Committee-side resident access for one flat: issue a code (shown once, only its hash is stored),
- * share it, replace it, or revoke it. Residents need no account.
+ * Committee-side resident access for one flat: the residents' emails and mobiles, sending them
+ * their login, or issuing a code to share by hand (shown once, only its hash is stored),
+ * replacing it, or revoking it. Residents need no account.
  */
 export default function ResidentAccess({ societyId, flat, onClose, onChanged }: { societyId: string; flat: FlatModel; onClose: () => void; onChanged: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [code, setCode] = useState<string | null>(null);
+  const [societyName, setSocietyName] = useState("Your society");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const label = flatLabelOf(flat);
   const active = Boolean(flat.accessIssuedAt);
-  const savedEmails = (flat.residentEmails ?? []).filter(Boolean) as string[];
+  const savedEmails = listOf(flat.residentEmails);
+  const savedPhones = listOf(flat.residentPhones);
   const [emailText, setEmailText] = useState(savedEmails.join(", "));
-  const [emailMsg, setEmailMsg] = useState<string | null>(null);
-  const typed = parseEmailList(emailText);
-  const emailsChanged = typed.emails.join(",") !== savedEmails.join(",");
+  const [phoneText, setPhoneText] = useState(savedPhones.map(formatPhone).join(", "));
+  const [contactMsg, setContactMsg] = useState<string | null>(null);
+  const typedEmails = parseEmailList(emailText);
+  const typedPhones = parsePhoneList(phoneText);
+  const contactsChanged = typedEmails.emails.join(",") !== savedEmails.join(",") || typedPhones.phones.join(",") !== savedPhones.join(",");
+  const autoEmails = residentEmailEnabled ? savedEmails.length : 0;
+  const reachable = autoEmails + savedPhones.length;
 
-  async function saveEmails() {
-    if (typed.bad.length) return setError(new Error(`Not valid emails: ${typed.bad.join(", ")}`));
+  async function saveContacts() {
+    const bad = [...typedEmails.bad, ...typedPhones.bad];
+    if (bad.length) return setError(new Error(`Not a valid email or mobile number: ${bad.join(", ")}`));
     setBusy(true);
     setError(null);
-    setEmailMsg(null);
+    setContactMsg(null);
     try {
-      unwrap(await client.models.Flat.update({ id: flat.id, residentEmails: typed.emails }));
-      setEmailText(typed.emails.join(", "));
-      setEmailMsg("Emails saved.");
+      unwrap(await client.models.Flat.update({ id: flat.id, residentEmails: typedEmails.emails, residentPhones: typedPhones.phones }));
+      setEmailText(typedEmails.emails.join(", "));
+      setPhoneText(typedPhones.phones.map(formatPhone).join(", "));
+      setContactMsg("Contacts saved.");
       onChanged();
     } catch (err) {
       setError(err);
@@ -41,19 +52,26 @@ export default function ResidentAccess({ societyId, flat, onClose, onChanged }: 
     }
   }
 
-  async function emailCode() {
-    if (active && !confirm(`Email ${label} a new code? The current code stops working immediately.`)) return;
+  async function sendLogin() {
+    if ((active || code) && !confirm(`Send ${label} a new code? The current code stops working immediately.`)) return;
     setBusy(true);
     setError(null);
-    setEmailMsg(null);
+    setContactMsg(null);
     try {
-      const res = unwrap<{ results: EmailAccessResult[] }>(
-        await client.mutations.emailResidentAccess({ societyId, flatIds: [flat.id], origin: window.location.origin, replaceExisting: true })
+      const res = unwrap<{ results: SendAccessResult[]; society?: string }>(
+        await client.mutations.sendResidentAccess({ societyId, flatIds: [flat.id], origin: window.location.origin, replaceExisting: true })
       );
       const r = res.results[0];
-      if (r.status !== "sent") throw new Error(r.reason ?? "Not sent");
-      setCode(null);
-      setEmailMsg(`${DEMO ? "Demo: would have emailed" : "Emailed"} a new code to ${r.sentTo.join(", ")}.${r.reason ? ` ${r.reason}` : ""}`);
+      if (r.status !== "sent" && r.status !== "manual") throw new Error(r.reason ?? "Not sent");
+      if (res.society) setSocietyName(res.society);
+      // numbers to message from the committee's own WhatsApp come back with the code
+      setCode(r.code ?? null);
+      const parts = [
+        r.sentTo.length > 0 && `${DEMO ? "Demo: would have sent" : "Sent"} the new code to ${r.sentTo.map((x) => (x.startsWith("+") ? formatPhone(x) : x)).join(", ")}.`,
+        r.manualPhones?.length && `Now tap the WhatsApp button for each number above.`,
+        r.reason,
+      ];
+      setContactMsg(parts.filter(Boolean).join(" "));
       onChanged();
     } catch (err) {
       setError(err);
@@ -71,8 +89,9 @@ export default function ResidentAccess({ societyId, flat, onClose, onChanged }: 
     setBusy(true);
     setError(null);
     try {
-      const res = unwrap<{ code: string }>(await client.mutations.issueResidentAccess({ societyId, flatId: flat.id }));
+      const res = unwrap<{ code: string; society?: string }>(await client.mutations.issueResidentAccess({ societyId, flatId: flat.id }));
       setCode(res.code);
+      if (res.society) setSocietyName(res.society);
       onChanged();
     } catch (err) {
       setError(err);
@@ -98,7 +117,7 @@ export default function ResidentAccess({ societyId, flat, onClose, onChanged }: 
   }
 
   const link = code ? residentLink(window.location.origin, code) : "";
-  const message = code ? `Your AquaLedger access for flat ${label}: ${link}\n(or open ${window.location.origin}/resident and enter code ${code})` : "";
+  const message = code ? whatsappText({ societyName, flat: label, code, link }) : "";
   const copy = async (what: string, text: string) => {
     await navigator.clipboard.writeText(text).catch(() => {});
     setCopied(what);
@@ -130,14 +149,29 @@ export default function ResidentAccess({ societyId, flat, onClose, onChanged }: 
               <Button variant="secondary" onClick={() => copy("link", link)}>{copied === "link" ? "Copied ✓" : "Copy link"}</Button>
               <Button variant="secondary" onClick={() => copy("code", code)}>{copied === "code" ? "Copied ✓" : "Copy code"}</Button>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+                href={whatsappLink(null, message)}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-lg bg-emerald-600 px-3.5 py-2 font-medium text-white hover:bg-emerald-700"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-emerald-600 px-3.5 py-2 font-medium text-emerald-700 hover:bg-emerald-50"
               >
                 Share on WhatsApp
               </a>
             </div>
+            {savedPhones.length > 0 && (
+              <div className="grid gap-2">
+                {savedPhones.map((p) => (
+                  <a
+                    key={p}
+                    href={whatsappLink(p, message)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3.5 py-2 font-medium text-white hover:bg-emerald-700"
+                  >
+                    💬 WhatsApp {formatPhone(p)}
+                  </a>
+                ))}
+              </div>
+            )}
             <p className="break-all text-xs text-slate-500">{link}</p>
           </>
         ) : active ? (
@@ -151,27 +185,43 @@ export default function ResidentAccess({ societyId, flat, onClose, onChanged }: 
           </p>
         )}
         <div className="space-y-2 rounded-xl bg-slate-50 p-3">
-          <label htmlFor="flat-emails" className="block text-xs font-medium text-slate-700">
+          <label className="block text-xs font-medium text-slate-700">
             Resident emails
-          </label>
-          <div className="flex gap-2">
             <input
               id="flat-emails"
               value={emailText}
               onChange={(e) => setEmailText(e.target.value)}
               placeholder="owner@example.com, tenant@example.com"
-              className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500"
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal outline-none focus:border-brand-500"
             />
-            <Button variant="secondary" onClick={saveEmails} disabled={busy || !emailsChanged}>
-              Save
+          </label>
+          <label className="block text-xs font-medium text-slate-700">
+            Resident mobiles (WhatsApp)
+            <input
+              id="flat-phones"
+              value={phoneText}
+              onChange={(e) => setPhoneText(e.target.value)}
+              placeholder="98765 43210, 91234 56789"
+              inputMode="tel"
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal outline-none focus:border-brand-500"
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={saveContacts} disabled={busy || !contactsChanged}>
+              Save contacts
             </Button>
+            {reachable > 0 && (
+              <Button onClick={sendLogin} disabled={busy || contactsChanged} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                Send {active || code ? "a new code" : "the login"} to {reachable === 1 ? "1 resident" : `${reachable} residents`}
+              </Button>
+            )}
           </div>
-          {savedEmails.length > 0 && residentEmailEnabled && (
-            <Button onClick={emailCode} disabled={busy || emailsChanged} className="w-full bg-emerald-600 hover:bg-emerald-700">
-              ✉ Email {active || code ? "a new code" : "the login"} to {savedEmails.length === 1 ? savedEmails[0] : `${savedEmails.length} residents`}
-            </Button>
+          {reachable > 0 && (
+            <p className="text-xs text-slate-500">
+              {[autoEmails > 0 && "by email", savedPhones.length > 0 && (residentWhatsAppEnabled ? "by WhatsApp" : "on WhatsApp from your phone (one tap each)")].filter(Boolean).join(" and ")}
+            </p>
           )}
-          {emailMsg && <p className="text-xs text-emerald-700">{emailMsg}</p>}
+          {contactMsg && <p className="text-xs text-emerald-700">{contactMsg}</p>}
         </div>
         <div className="flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-4">
           <div className="flex gap-2">

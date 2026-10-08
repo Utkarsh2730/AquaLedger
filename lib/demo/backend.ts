@@ -298,6 +298,7 @@ export const demoClient = {
           { id: "ai-chat", name: "AI answers (chat)", status: "warn", detail: "Demo mode uses the free rule-based answers." },
           { id: "ai-insights", name: "AI monthly summaries", status: "warn", detail: "Demo mode uses the free rule-based summaries." },
           { id: "resident-email", name: "Resident access emails", status: "warn", detail: "Demo mode shows the email residents would get instead of sending it." },
+          { id: "resident-whatsapp", name: "Resident WhatsApp", status: "pass", detail: "One-tap mode: the committee sends each flat's login from its own WhatsApp." },
         ],
       });
     },
@@ -337,9 +338,9 @@ export const demoClient = {
       const issuedAt = now();
       Object.assign(flat, { accessCodeHash: await hashAccessCode(code), accessIssuedAt: issuedAt });
       persist();
-      return ok({ code, flat: flatLabel(flat), issuedAt });
+      return ok({ code, flat: flatLabel(flat), issuedAt, society: db.society?.name });
     },
-    emailResidentAccess: async ({ flatIds, origin, replaceExisting }: { flatIds: string[]; origin: string; replaceExisting?: boolean }) => {
+    sendResidentAccess: async ({ flatIds, origin, replaceExisting }: { flatIds: string[]; origin: string; replaceExisting?: boolean }) => {
       const society = ensure();
       await pause();
       const results = [];
@@ -352,20 +353,22 @@ export const demoClient = {
         }
         const label = flatLabel(flat);
         const emails = (flat.residentEmails ?? []).filter((e): e is string => Boolean(e));
-        if (!emails.length) results.push({ flatId, flat: label, status: "skipped", sentTo: [], reason: "No resident email on file" });
+        const phones = (flat.residentPhones ?? []).filter((p): p is string => Boolean(p));
+        if (!emails.length && !phones.length) results.push({ flatId, flat: label, status: "skipped", sentTo: [], reason: "No email or mobile on file" });
         else if (flat.accessCodeHash && !replaceExisting) results.push({ flatId, flat: label, status: "skipped", sentTo: [], reason: "Already has access" });
         else {
           const code = generateAccessCode();
           Object.assign(flat, { accessCodeHash: await hashAccessCode(code), accessIssuedAt: now() });
           const base = origin.replace(/\/$/, "");
           const mail = accessEmail({ societyName: society.name, flat: label, code, link: residentLink(base, code), portalUrl: `${base}/resident/` });
-          preview ??= { to: emails.join(", "), subject: mail.subject, text: mail.text };
-          results.push({ flatId, flat: label, status: "sent", sentTo: emails });
+          if (emails.length) preview ??= { to: emails.join(", "), subject: mail.subject, text: mail.text };
+          // emails are "sent" (simulated); WhatsApp is the committee's one tap, as on a backend without a Business number
+          results.push({ flatId, flat: label, status: emails.length ? "sent" : "manual", sentTo: emails, ...(phones.length ? { manualPhones: phones, code } : {}) });
         }
       }
       persist();
       // the offline demo can't send email: it shows what residents would receive instead
-      return ok({ results, simulated: true, preview });
+      return ok({ results, simulated: true, preview, email: true, whatsapp: false, society: society.name });
     },
     revokeResidentAccess: async ({ flatId }: { flatId: string }) => {
       ensure();

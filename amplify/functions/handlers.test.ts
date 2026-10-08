@@ -19,6 +19,7 @@ import { ddb } from "./shared/db";
 import { cognito } from "./shared/identity";
 import { sns } from "./shared/notify";
 import { ses } from "./shared/mail";
+import { whatsapp } from "./shared/whatsapp";
 import { handler as adminOps } from "./admin-ops/handler";
 import { handler as analysis } from "./analysis/handler";
 import { handler as queryApi } from "./query-api/handler";
@@ -110,12 +111,21 @@ beforeEach(() => {
   });
 });
 
-describe("emailing residents their access", () => {
-  it("sends each listed flat a fresh code, skips or restores as it should", async () => {
-    const created: any = await adminOps(appsync("setupSociety", { name: "Green <Meadows>", blocks: ["a"], flatsPerBlock: 4 }));
+describe("sending residents their login", () => {
+  async function setup() {
+    const created: any = await adminOps(appsync("setupSociety", { name: "Green <Meadows>", blocks: ["a"], flatsPerBlock: 6 }));
     const sid = created.societyId;
     const admin = [sid, "ADMINS"];
     const flat = (n: string) => [...tbl("FLAT-table").values()].find((f) => `${f.block}-${f.number}` === n);
+    const send = (flatIds: string[], extra: Record<string, unknown> = {}, groups = admin) =>
+      adminOps(appsync("sendResidentAccess", { societyId: sid, flatIds, origin: "https://aqua.example/", ...extra }, groups)) as Promise<any>;
+    const guest = (code: string) => queryApi({ typeName: "Query", fieldName: "residentPortal", arguments: { code }, identity: null } as any) as Promise<any>;
+    return { sid, admin, flat, send, guest };
+  }
+  const byFlat = (res: any) => Object.fromEntries(res.results.map((r: any) => [r.flat, r]));
+
+  it("emails each listed flat a fresh code, skips or restores as it should", async () => {
+    const { sid, admin, flat, send, guest } = await setup();
     const [f1, f2, f3, f4] = ["A-101", "A-102", "A-201", "A-202"].map(flat);
     f1.residentEmails = ["rahul@example.com", "priya@example.com"];
     f2.residentEmails = ["bounce@example.com"];
@@ -123,10 +133,12 @@ describe("emailing residents their access", () => {
     const before = (await adminOps(appsync("issueResidentAccess", { societyId: sid, flatId: f2.id }, admin))) as any;
     await adminOps(appsync("issueResidentAccess", { societyId: sid, flatId: f4.id }, admin));
     const f2Hash = tbl("FLAT-table").get(f2.id).accessCodeHash;
+    const ids = [f1.id, f2.id, f3.id, f4.id];
 
-    const args = { societyId: sid, flatIds: [f1.id, f2.id, f3.id, f4.id], origin: "https://aqua.example/" };
+    // without SES, emails can't go out: those flats are skipped, nothing changes
     delete process.env.SENDER_EMAIL;
-    await expect(adminOps(appsync("emailResidentAccess", args, admin))).rejects.toThrow(/AQUALEDGER_SENDER_EMAIL/);
+    expect(byFlat(await send([f1.id]))["A-101"]).toMatchObject({ status: "skipped", reason: "Only emails on file, and email sending isn't set up" });
+    expect(tbl("FLAT-table").get(f1.id).accessCodeHash).toBeUndefined();
     process.env.SENDER_EMAIL = "committee@aqua.example";
 
     const sent: { to: string; subject: string; text: string }[] = [];
@@ -137,21 +149,20 @@ describe("emailing residents their access", () => {
       return {};
     });
     try {
-      await expect(adminOps(appsync("emailResidentAccess", args, ["other"]))).rejects.toThrow(/Unauthorized/);
-      await expect(adminOps(appsync("emailResidentAccess", { ...args, origin: "javascript:alert(1)" }, admin))).rejects.toThrow(/Invalid site/);
+      await expect(send(ids, {}, ["other"])).rejects.toThrow(/Unauthorized/);
+      await expect(send(ids, { origin: "javascript:alert(1)" })).rejects.toThrow(/Invalid site/);
 
       // f2 already has access but replaceExisting forces a new code, whose send then fails
-      const res: any = await adminOps(appsync("emailResidentAccess", { ...args, replaceExisting: true }, admin));
-      const by = Object.fromEntries(res.results.map((r: any) => [r.flat, r]));
+      const by = byFlat(await send(ids, { replaceExisting: true }));
       expect(by["A-101"]).toMatchObject({ status: "sent", sentTo: ["rahul@example.com", "priya@example.com"] });
+      expect(by["A-101"].code).toBeUndefined(); // only returned when the committee must send it by hand
       expect(by["A-102"].status).toBe("failed");
       expect(by["A-102"].reason).toMatch(/sandbox/);
-      expect(by["A-201"]).toMatchObject({ status: "skipped", reason: "No resident email on file" });
+      expect(by["A-201"]).toMatchObject({ status: "skipped", reason: "No email or mobile on file" });
       expect(by["A-202"].status).toBe("sent");
       // a failed send keeps the old code working
       expect(tbl("FLAT-table").get(f2.id).accessCodeHash).toBe(f2Hash);
-      const portal: any = await queryApi({ typeName: "Query", fieldName: "residentPortal", arguments: { code: before.code }, identity: null } as any);
-      expect(portal.flat.label).toBe("A-102");
+      expect((await guest(before.code)).flat.label).toBe("A-102");
 
       // the email carries a working code for that flat, and both residents got the same one
       const mail = sent.find((m) => m.to === "rahul@example.com")!;
@@ -159,16 +170,58 @@ describe("emailing residents their access", () => {
       const code = mail.text.match(/Access code:\s+(\S+)/)![1];
       expect(sent.find((m) => m.to === "priya@example.com")!.text).toContain(code);
       expect(mail.text).toContain(`https://aqua.example/resident/?code=${code}`);
-      const opened: any = await queryApi({ typeName: "Query", fieldName: "residentPortal", arguments: { code }, identity: null } as any);
-      expect(opened.flat.label).toBe("A-101");
+      expect((await guest(code)).flat.label).toBe("A-101");
 
       // without replaceExisting, flats that have access are left alone
       sent.length = 0;
-      const again: any = await adminOps(appsync("emailResidentAccess", args, admin));
+      const again = await send(ids);
       expect(again.results.filter((r: any) => r.status === "skipped" && r.reason === "Already has access").map((r: any) => r.flat)).toEqual(["A-101", "A-102", "A-202"]);
       expect(sent).toHaveLength(0);
     } finally {
       delete process.env.SENDER_EMAIL;
+    }
+  });
+
+  it("WhatsApp: automatic when set up, otherwise one tap per number from the committee's phone", async () => {
+    const { flat, send, guest } = await setup();
+    const [f1, f2, f3] = ["A-101", "A-102", "A-201"].map(flat);
+    f1.residentPhones = ["+919876543210", "+919123456789"];
+    f2.residentPhones = ["+919000000000"];
+    f3.residentPhones = ["+919811122233"];
+    f3.residentEmails = ["f3@example.com"]; // email isn't set up in this test: phones still work
+
+    // one-tap mode (no WhatsApp Business number): the code comes back for the committee to send
+    const manual = byFlat(await send([f1.id]));
+    expect(manual["A-101"]).toMatchObject({ status: "manual", sentTo: [], manualPhones: ["+919876543210", "+919123456789"] });
+    expect((await guest(manual["A-101"].code)).flat.label).toBe("A-101");
+
+    // automatic mode
+    process.env.WHATSAPP_PHONE_ID = "phone-number-id-test";
+    const messages: any[] = [];
+    vi.spyOn(whatsapp, "send").mockImplementation(async (cmd: any) => {
+      expect(cmd.input.originationPhoneNumberId).toBe("phone-number-id-test");
+      const msg = JSON.parse(new TextDecoder().decode(cmd.input.message));
+      if (msg.to === "+919000000000") throw Object.assign(new Error("(#131026) Message undeliverable: recipient is not a valid WhatsApp user"), { name: "ValidationException" });
+      messages.push(msg);
+      return {};
+    });
+    try {
+      const auto = byFlat(await send([f1.id, f2.id, f3.id], { replaceExisting: true }));
+      expect(auto["A-101"]).toMatchObject({ status: "sent", sentTo: ["+919876543210", "+919123456789"] });
+      expect(auto["A-101"].code).toBeUndefined();
+      // a number WhatsApp rejects falls back to the committee's one tap, with the reason
+      expect(auto["A-102"]).toMatchObject({ status: "manual", manualPhones: ["+919000000000"] });
+      expect(auto["A-102"].reason).toMatch(/isn't on WhatsApp/);
+      expect(auto["A-201"].sentTo).toEqual(["+919811122233"]);
+      const m = messages.find((x) => x.to === "+919876543210");
+      expect(m.template.name).toBe("aqualedger_login");
+      const [society, flatLabel, code, link] = m.template.components[0].parameters.map((p: any) => p.text);
+      expect([society, flatLabel]).toEqual(["Green <Meadows>", "A-101"]);
+      expect(link).toBe(`https://aqua.example/resident/?code=${code}`);
+      expect((await guest(code)).flat.label).toBe("A-101");
+      await expect(guest(manual["A-101"].code)).rejects.toThrow(/not recognised/); // replaced
+    } finally {
+      delete process.env.WHATSAPP_PHONE_ID;
     }
   });
 });
