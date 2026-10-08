@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "@aws-amplify/ui-react/styles.css";
 import ConfigureAmplify from "@/components/ConfigureAmplify";
 
 export const metadata: Metadata = {

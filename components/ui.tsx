@@ -1,13 +1,13 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ComponentType, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, SVGProps } from "react";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
 export function Card({ title, action, children, className }: { title?: ReactNode; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cx("min-w-0 rounded-xl border border-slate-200 bg-white p-5 shadow-sm", className)}>
+    <section className={cx("min-w-0 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]", className)}>
       {(title || action) && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          {title && <h2 className="text-sm font-semibold text-slate-700">{title}</h2>}
+          {title && <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>}
           {action}
         </div>
       )}
@@ -16,11 +16,40 @@ export function Card({ title, action, children, className }: { title?: ReactNode
   );
 }
 
-export function Stat({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: "good" | "bad" | "neutral" }) {
+const STAT_TONES = {
+  brand: "bg-brand-50 text-brand-700",
+  good: "bg-emerald-50 text-emerald-700",
+  bad: "bg-rose-50 text-rose-600",
+  warn: "bg-amber-50 text-amber-700",
+  neutral: "bg-slate-100 text-slate-600",
+};
+
+export function Stat({
+  label,
+  value,
+  hint,
+  tone,
+  icon: Icon,
+  iconTone = "brand",
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  tone?: "good" | "bad" | "neutral";
+  icon?: ComponentType<SVGProps<SVGSVGElement>>;
+  iconTone?: keyof typeof STAT_TONES;
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-semibold">{value}</div>
+    <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
+        {Icon && (
+          <span className={cx("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", STAT_TONES[iconTone])}>
+            <Icon width={17} height={17} />
+          </span>
+        )}
+      </div>
+      <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
       {hint && <div className={cx("mt-1 text-xs", tone === "bad" ? "text-rose-600" : tone === "good" ? "text-emerald-600" : "text-slate-500")}>{hint}</div>}
     </div>
   );
@@ -53,11 +82,11 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 }
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={cx("w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100", props.className)} />;
+  return <input {...props} className={cx("w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-brand-500 sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-100", props.className)} />;
 }
 
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={cx("w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none", props.className)} />;
+  return <select {...props} className={cx("w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base focus:border-brand-500 sm:text-sm focus:outline-none", props.className)} />;
 }
 
 export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "good" | "warn" | "bad" | "info" }) {
@@ -114,8 +143,8 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
+        {subtitle && <p className="mt-1 max-w-3xl text-sm text-slate-500">{subtitle}</p>}
       </div>
       {action}
     </div>

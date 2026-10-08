@@ -7,6 +7,7 @@ import type { DashboardSummary } from "@/lib/core/summary";
 import { monthLabel } from "@/lib/core/time";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, Empty, ErrorBox, Input, PageHeader, Spinner, Stat } from "@/components/ui";
+import { ChatIcon } from "@/components/icons";
 
 type Insight = Schema["Insight"]["type"];
 interface Msg {
@@ -98,7 +99,7 @@ export default function InsightsPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="💬 Ask your water data">
+        <Card title={<span className="flex items-center gap-2"><ChatIcon width={18} height={18} className="text-brand-600" /> Ask your water data</span>}>
           <div className="flex h-96 flex-col">
             <div className="flex-1 space-y-3 overflow-y-auto pr-1">
               {messages.length === 0 && (

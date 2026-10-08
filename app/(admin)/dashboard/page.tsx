@@ -6,6 +6,7 @@ import { client, fmtDateTime, inr, kl, unwrap } from "@/lib/client";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, ErrorBox, PageHeader, Spinner, Stat, Table, Td } from "@/components/ui";
 import { CostChart, DailyTrendChart, SourceMixChart } from "@/components/charts";
+import { AlertIcon, ArrowRightIcon, BoltIcon, DropIcon, GaugeIcon, RupeeIcon, SparklesIcon } from "@/components/icons";
 import type { DashboardSummary } from "@/lib/core/summary";
 import { monthLabel } from "@/lib/core/time";
 
@@ -98,25 +99,30 @@ export default function DashboardPage() {
         subtitle={`${data.society.city ? data.society.city + " · " : ""}${k.flats} flats · as of ${fmtDateTime(d.asOf)}`}
         action={
           <Button onClick={runAnalysis} disabled={running} variant="secondary">
-            {running ? "Running…" : "⚡ Run analysis now"}
+            <BoltIcon width={16} height={16} className="text-amber-500" />
+            {running ? "Running…" : "Run analysis now"}
           </Button>
         }
       />
       <ErrorBox error={error} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label={`Used in ${monthLabel(d.currentMonth)}`} value={kl(k.litresThisMonth)} hint={`${Math.round(k.avgLitresPerFlatPerDay)} L per flat per day`} />
+        <Stat icon={DropIcon} label={`Used in ${monthLabel(d.currentMonth)}`} value={kl(k.litresThisMonth)} hint={`${Math.round(k.avgLitresPerFlatPerDay)} L per flat per day`} />
         <Stat
+          icon={RupeeIcon}
+          iconTone="neutral"
           label={lastComplete ? `Cost in ${monthLabel(lastComplete.month)}` : "Cost last month"}
           value={inr(k.costLastMonth)}
           hint={`${inr(k.costThisMonth)} so far this month`}
         />
-        <Stat label="Avg cost per kL" value={inr(k.costPerKl)} hint="Across all sources" />
+        <Stat icon={GaugeIcon} iconTone="warn" label="Avg cost per kL" value={inr(k.costPerKl)} hint="Across all sources" />
         <Stat
+          icon={AlertIcon}
+          iconTone={k.openAlerts ? "bad" : "good"}
           label="Open leak alerts"
           value={k.openAlerts}
           tone={k.openAlerts ? "bad" : "good"}
-          hint={k.openAlerts ? <Link href="/alerts" className="underline">Review alerts →</Link> : "All clear"}
+          hint={k.openAlerts ? <Link href="/alerts" className="font-medium hover:underline">Review alerts →</Link> : "All clear"}
         />
       </div>
 
@@ -171,15 +177,52 @@ export default function DashboardPage() {
         <Card title="Spend by source" className="lg:col-span-2">
           <CostChart data={d.monthly} currentMonth={d.currentMonth} />
         </Card>
-        <Card title={d.forecast ? `Forecast · ${monthLabel(d.forecast.month)}` : "Forecast"} action={<Link href="/insights" className="text-xs text-brand-700 underline">Details</Link>}>
+        <Card title={d.forecast ? `Forecast · ${monthLabel(d.forecast.month)}` : "Forecast"}>
           {d.forecast ? (
-            <div className="space-y-2 text-sm">
-              <div className="text-3xl font-semibold">{d.forecast.tankers} tankers</div>
-              <div className="text-slate-500">≈ {inr(d.forecast.tankerCost)} · demand {kl(d.forecast.demandLitres)}</div>
-              <div className="pt-2 text-xs text-slate-500">
-                {kl(d.forecast.municipalLitres)} municipal + {kl(d.forecast.borewellLitres)} borewell expected. Seasonal factor ×{d.forecast.seasonalFactor}.
-              </div>
-            </div>
+            (() => {
+              const f = d.forecast;
+              const own = f.municipalLitres + f.borewellLitres;
+              const parts = [
+                { label: "Municipal", litres: f.municipalLitres, color: "bg-cyan-600" },
+                { label: "Borewell", litres: f.borewellLitres, color: "bg-lime-600" },
+                { label: "Tankers", litres: Math.max(f.demandLitres - own, 0), color: "bg-amber-500" },
+              ];
+              const total = Math.max(f.demandLitres, own, 1);
+              return (
+                <div className="flex flex-col gap-4 text-sm">
+                  <div>
+                    <div className="text-4xl font-semibold tracking-tight">
+                      {f.tankers} <span className="text-lg font-medium text-slate-500">tankers</span>
+                    </div>
+                    <div className="mt-1 text-slate-500">
+                      ≈ {inr(f.tankerCost)} · demand {kl(f.demandLitres)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex h-3 overflow-hidden rounded-full bg-slate-100" aria-label="Where next month's water comes from">
+                      {parts.map((p) => (
+                        <div key={p.label} className={p.color} style={{ width: `${(p.litres / total) * 100}%` }} />
+                      ))}
+                    </div>
+                    <ul className="mt-3 space-y-1.5 text-xs">
+                      {parts.map((p) => (
+                        <li key={p.label} className="flex items-center justify-between gap-2 text-slate-600">
+                          <span className="flex items-center gap-2">
+                            <span className={`h-2 w-2 rounded-full ${p.color}`} />
+                            {p.label}
+                          </span>
+                          <span className="font-medium text-slate-800">{kl(p.litres)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="text-xs text-slate-500">Seasonal factor ×{f.seasonalFactor}. Book tankers before the rush.</p>
+                  <Link href="/insights" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline">
+                    Plan tankers <ArrowRightIcon width={16} height={16} />
+                  </Link>
+                </div>
+              );
+            })()
           ) : (
             <p className="text-sm text-slate-500">Needs at least one complete month of readings.</p>
           )}
@@ -203,11 +246,16 @@ export default function DashboardPage() {
           </Table>
         </Card>
         <Card title="Daily consumption · last 45 days" className="lg:col-span-2">
-          <DailyTrendChart data={d.dailyTrend} />
+          <DailyTrendChart data={d.dailyTrend} height={420} />
         </Card>
       </div>
 
-      <Card title="✨ Monthly insight" action={data.insight && <Badge tone="info">{data.insight.generatedBy === "rules" ? "auto summary" : "AI"}</Badge>}>
+      <Card
+        title={
+          <span className="flex items-center gap-2">
+            <SparklesIcon width={18} height={18} className="text-brand-600" /> Monthly insight
+          </span>
+        } action={data.insight && <Badge tone="info">{data.insight.generatedBy === "rules" ? "auto summary" : "AI"}</Badge>}>
         {data.insight ? (
           <p className="text-sm leading-relaxed text-slate-700">{data.insight.summaryText}</p>
         ) : (

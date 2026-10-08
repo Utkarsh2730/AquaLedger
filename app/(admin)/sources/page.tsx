@@ -5,6 +5,7 @@ import { client, fmtDate, inr, kl, listAll } from "@/lib/client";
 import type { Schema } from "@/amplify/data/resource";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, Empty, ErrorBox, Field, Input, PageHeader, Select, Table, Td } from "@/components/ui";
+import { DropIcon, TrashIcon, TruckIcon } from "@/components/icons";
 
 type Tanker = Schema["TankerDelivery"]["type"];
 type Supply = Schema["SourceSupply"]["type"];
@@ -62,7 +63,7 @@ export default function SourcesPage() {
       <PageHeader title="Water sources" subtitle="Log every tanker and the municipal / borewell supply so cost per kL is accurate." />
       <ErrorBox error={error} />
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="🚚 Log a tanker delivery">
+        <Card title={<span className="flex items-center gap-2"><TruckIcon width={18} height={18} className="text-amber-500" /> Log a tanker delivery</span>}>
           <form onSubmit={addTanker} className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <Field label="Vendor">
@@ -85,7 +86,7 @@ export default function SourcesPage() {
             </div>
           </form>
         </Card>
-        <Card title="🚰 Log municipal / borewell supply">
+        <Card title={<span className="flex items-center gap-2"><DropIcon width={18} height={18} className="text-cyan-600" /> Log municipal / borewell supply</span>}>
           <form onSubmit={addSupply} className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <Field label="Source">
@@ -135,8 +136,8 @@ export default function SourcesPage() {
                   <Td>{inr(t.cost)}</Td>
                   <Td>{inr((t.cost / t.litres) * 1000)}</Td>
                   <Td>
-                    <button onClick={() => remove("tanker", t.id)} className="text-xs text-slate-400 hover:text-rose-600">
-                      delete
+                    <button onClick={() => remove("tanker", t.id)} className="rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Delete tanker on ${fmtDate(t.date)}`} title="Delete">
+                      <TrashIcon width={16} height={16} />
                     </button>
                   </Td>
                 </tr>
@@ -167,8 +168,8 @@ export default function SourcesPage() {
                   <Td>{kl(s.litres)}</Td>
                   <Td>{inr(s.cost)}</Td>
                   <Td>
-                    <button onClick={() => remove("supply", s.id)} className="text-xs text-slate-400 hover:text-rose-600">
-                      delete
+                    <button onClick={() => remove("supply", s.id)} className="rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Delete ${s.type} supply on ${fmtDate(s.date)}`} title="Delete">
+                      <TrashIcon width={16} height={16} />
                     </button>
                   </Td>
                 </tr>

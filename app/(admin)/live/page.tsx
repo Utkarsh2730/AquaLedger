@@ -87,7 +87,7 @@ export default function LivePage() {
               {running ? "■ Stop meter" : "▶ Start meter"}
             </Button>
             <Button className="w-full" variant={tapOpen ? "danger" : "secondary"} onClick={() => setTapOpen(!tapOpen)} disabled={!running}>
-              {tapOpen ? "🚰 Close the tap" : "💦 Open the tap (simulate leak)"}
+              {tapOpen ? "Close the tap" : "Open the tap (simulate leak)"}
             </Button>
             <p className="text-xs text-slate-500">Sends one reading every 3 s. Normal use is ~0-1 L/min; an open tap is ~12 L/min.</p>
           </div>
@@ -109,7 +109,7 @@ export default function LivePage() {
           <div className="space-y-2">
             {alerts.map((a) => (
               <div key={a.id} className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
-                🚨 <b>{new Date(a.detectedAt).toLocaleTimeString("en-IN")}</b> · {a.message}
+                <b>{new Date(a.detectedAt).toLocaleTimeString("en-IN")}</b> · {a.message}
               </div>
             ))}
             <p className="text-xs text-slate-500">{DEMO ? "In the live app an email also goes to every confirmed admin." : "An email went to every confirmed admin subscription."}</p>

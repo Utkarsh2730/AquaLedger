@@ -7,6 +7,7 @@ import { addMonths, monthLabel } from "@/lib/core/time";
 import { equalSplit } from "@/lib/core/billing";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, Empty, ErrorBox, Input, PageHeader, Stat, Table, Td } from "@/components/ui";
+import { DownloadIcon } from "@/components/icons";
 
 const thisMonth = () => new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 7);
 
@@ -105,7 +106,7 @@ export default function BillsPage() {
           bills && bills.length > 0 && (
             <div className="flex gap-2">
               <Button variant="ghost" onClick={exportCsv}>
-                ⬇ Export CSV
+                <DownloadIcon width={16} height={16} /> Export CSV
               </Button>
               {bills.some((b) => b.status === "draft") && (
                 <Button variant="secondary" onClick={issueAll} disabled={busy}>

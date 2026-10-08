@@ -18,7 +18,9 @@ interface Result {
   checks: Check[];
 }
 
+/** plain-text marks, for "Copy results" */
 const ICON = { pass: "✅", warn: "⚠️", fail: "❌" } as const;
+const DOT = { pass: "bg-emerald-500", warn: "bg-amber-500", fail: "bg-rose-500" } as const;
 const TONE = {
   pass: "border-emerald-200 bg-emerald-50",
   warn: "border-amber-200 bg-amber-50",
@@ -76,13 +78,13 @@ export default function SystemCheck({ societyId }: { societyId: string }) {
       <ErrorBox error={error} />
       {result && (
         <div className="mt-4 space-y-2">
-          <div className="text-sm font-semibold">
-            {ICON[result.overall]} {SUMMARY[result.overall]}
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <span className={`h-2.5 w-2.5 rounded-full ${DOT[result.overall]}`} /> {SUMMARY[result.overall]}
           </div>
           {result.checks.map((c) => (
             <div key={c.id} className={`rounded-lg border p-3 text-sm ${TONE[c.status]}`}>
-              <div className="font-medium">
-                {ICON[c.status]} {c.name}
+              <div className="flex items-center gap-2 font-medium">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${DOT[c.status]}`} /> {c.name}
               </div>
               <div className="mt-0.5 break-words text-slate-700">{c.detail}</div>
               {c.fix && <div className="mt-1 break-words text-slate-600">→ {c.fix}</div>}

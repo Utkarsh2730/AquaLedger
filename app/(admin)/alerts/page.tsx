@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { client, fmtDateTime, listAll, unwrap, type AlertModel } from "@/lib/client";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, Empty, ErrorBox, PageHeader, Spinner } from "@/components/ui";
+import { AlertIcon, CheckIcon, MoonIcon, SearchIcon } from "@/components/icons";
 
 const TYPE_LABEL: Record<string, string> = { spike: "Usage spike", night_flow: "Night flow (2-4 a.m.)", live_spike: "Live abnormal flow" };
 
@@ -55,7 +56,8 @@ export default function AlertsPage() {
         subtitle="Every night each flat is checked for unusual spikes in usage and for water running between 2 and 4 a.m. Smart meters raise alerts within seconds."
         action={
           <Button onClick={scan} disabled={scanning}>
-            {scanning ? "Scanning…" : "🔍 Scan for leaks now"}
+            <SearchIcon width={16} height={16} />
+            {scanning ? "Scanning…" : "Scan for leaks now"}
           </Button>
         }
       />
@@ -65,13 +67,24 @@ export default function AlertsPage() {
         <input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} /> Show resolved
       </label>
       {shown.length === 0 ? (
-        <Empty>No {showResolved ? "" : "open "}alerts. 🎉</Empty>
+        <Empty>
+          <CheckIcon className="mx-auto mb-2 h-8 w-8 text-emerald-500" />
+          No {showResolved ? "" : "open "}alerts. Every flat looks normal.
+        </Empty>
       ) : (
         <div className="space-y-3">
           {shown.map((a) => (
-            <Card key={a.id} className={a.resolved ? "opacity-60" : ""}>
+            <Card
+              key={a.id}
+              className={`border-l-4 ${a.resolved ? "border-l-emerald-400 opacity-60" : a.severity === "high" ? "border-l-rose-500" : a.severity === "medium" ? "border-l-amber-400" : "border-l-slate-300"}`}
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${a.resolved ? "bg-emerald-50 text-emerald-600" : a.severity === "high" ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"}`}
+                >
+                  {a.resolved ? <CheckIcon /> : a.type === "night_flow" ? <MoonIcon /> : <AlertIcon />}
+                </span>
+                <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Link href={`/flats/detail?id=${encodeURIComponent(a.flatId)}`} className="font-semibold text-brand-700 hover:underline">
                       {a.flatLabel}
@@ -84,7 +97,8 @@ export default function AlertsPage() {
                   <p className="text-xs text-slate-400">{fmtDateTime(a.detectedAt)}</p>
                 </div>
                 <Button variant={a.resolved ? "ghost" : "secondary"} onClick={() => resolve(a)}>
-                  {a.resolved ? "Reopen" : "✓ Mark fixed"}
+                  {!a.resolved && <CheckIcon width={16} height={16} />}
+                  {a.resolved ? "Reopen" : "Mark fixed"}
                 </Button>
               </div>
             </Card>

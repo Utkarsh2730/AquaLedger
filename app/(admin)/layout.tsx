@@ -9,9 +9,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <BackendGate>
       <AuthGate>
-        <AdminShell>
-          <SocietyProvider>{children}</SocietyProvider>
-        </AdminShell>
+        {/* the shell shows the society's name and open alerts, so it sits inside the provider */}
+        <SocietyProvider>
+          <AdminShell>{children}</AdminShell>
+        </SocietyProvider>
       </AuthGate>
     </BackendGate>
   );
