@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { client, DEMO, flatLabelOf, residentEmailEnabled, residentWhatsAppEnabled, unwrap, type FlatModel, type SendAccessResult } from "@/lib/client";
-import { residentLink } from "@/lib/core/access";
+import { formatAccessCode, residentLink } from "@/lib/core/access";
+import { downloadAccessCsv, printAccessSlips, type AccessRow } from "@/lib/accessSheet";
 import { formatPhone, parseResidentContacts, SEND_BATCH, whatsappLink, whatsappText } from "@/lib/core/residents";
 import { Button, Card, ErrorBox } from "./ui";
 
@@ -34,12 +35,15 @@ export default function ResidentContacts({ societyId, flats, onChanged }: { soci
   const [tapped, setTapped] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<Preview | null>(null);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<{ society: string; rows: AccessRow[] } | null>(null);
+  const [sheetCopied, setSheetCopied] = useState(false);
   const file = useRef<HTMLInputElement>(null);
 
   const parsed = useMemo(() => (text.trim() ? parseResidentContacts(text, flats) : null), [text, flats]);
   const reachable = (f: FlatModel) => listOf(f.residentPhones).length > 0 || (residentEmailEnabled && listOf(f.residentEmails).length > 0);
   const withContacts = flats.filter((f) => listOf(f.residentEmails).length || listOf(f.residentPhones).length);
   const toSend = flats.filter((f) => reachable(f) && (replace || !f.accessIssuedAt));
+  const toGiveAll = flats.filter((f) => replace || !f.accessIssuedAt);
   const notYet = withContacts.filter((f) => !f.accessIssuedAt).length;
   const parsedTotals = parsed
     ? [...parsed.byFlat.values()].reduce((t, c) => ({ emails: t.emails + c.emails.length, phones: t.phones + c.phones.length }), { emails: 0, phones: 0 })
@@ -71,38 +75,81 @@ export default function ResidentContacts({ societyId, flats, onChanged }: { soci
     }
   }
 
-  async function send() {
-    const ids = toSend.map((f) => f.id);
+  /**
+   * "contacts": send logins to flats with an email or mobile on file.
+   * "all": give every flat a code; those with contacts get it sent too, and the committee gets a
+   * sheet of every code (download, print, or share).
+   */
+  async function send(mode: "contacts" | "all") {
+    const targets = mode === "all" ? toGiveAll : toSend;
+    const ids = targets.map((f) => f.id);
     if (!ids.length) return;
-    const warn = replace && toSend.some((f) => f.accessIssuedAt) ? "\n\nFlats that already have a code get a new one; their old code stops working." : "";
-    if (!confirm(`Send logins to the residents of ${ids.length} flat${ids.length === 1 ? "" : "s"}?${warn}`)) return;
+    const warn = replace && targets.some((f) => f.accessIssuedAt) ? "\n\nFlats that already have a code get a new one; their old code stops working." : "";
+    const ask =
+      mode === "all"
+        ? `Give access to ${ids.length} flat${ids.length === 1 ? "" : "s"}? Residents with an email or mobile on file are sent their login; you get a sheet of all the codes to print or share.`
+        : `Send logins to the residents of ${ids.length} flat${ids.length === 1 ? "" : "s"}?`;
+    if (!confirm(ask + warn)) return;
     setError(null);
     setResults([]);
     setTaps([]);
     setTapped(new Set());
     setPreview(null);
+    setSheet(null);
     setProgress({ done: 0, total: ids.length });
-    const all: SendAccessResult[] = [];
-    const queue: Tap[] = [];
-    try {
-      for (let i = 0; i < ids.length; i += SEND_BATCH) {
-        const res = unwrap<{ results: SendAccessResult[]; preview?: Preview; society?: string }>(
-          await client.mutations.sendResidentAccess({ societyId, flatIds: ids.slice(i, i + SEND_BATCH), origin: window.location.origin, replaceExisting: replace })
-        );
-        all.push(...res.results);
-        for (const r of res.results) {
-          if (!r.code || !r.manualPhones?.length) continue;
-          const message = whatsappText({ societyName: res.society ?? "Your society", flat: r.flat, code: r.code, link: residentLink(window.location.origin, r.code) });
-          for (const phone of r.manualPhones) queue.push({ key: `${r.flatId}:${phone}`, flat: r.flat, phone, href: whatsappLink(phone, message) });
-        }
-        if (res.preview) setPreview((p) => p ?? res.preview!);
-        setResults([...all]);
-        setTaps([...queue]);
-        setProgress({ done: Math.min(i + SEND_BATCH, ids.length), total: ids.length });
+    const batches: string[][] = [];
+    for (let i = 0; i < ids.length; i += SEND_BATCH) batches.push(ids.slice(i, i + SEND_BATCH));
+    const byBatch: SendAccessResult[][] = [];
+    let society = "Your society";
+    let done = 0;
+    const collect = () => {
+      const all = byBatch.flat().filter(Boolean);
+      const queue: Tap[] = [];
+      for (const r of all) {
+        if (!r.code || !r.manualPhones?.length) continue;
+        const message = whatsappText({ societyName: society, flat: r.flat, code: r.code, link: residentLink(window.location.origin, r.code) });
+        for (const phone of r.manualPhones) queue.push({ key: `${r.flatId}:${phone}`, flat: r.flat, phone, href: whatsappLink(phone, message) });
       }
+      setResults(all);
+      setTaps(queue);
+      if (mode === "all") {
+        setSheet({
+          society,
+          rows: all
+            .filter((r) => r.code)
+            .map((r) => ({ flat: r.flat, code: r.code!, link: residentLink(window.location.origin, r.code!) }))
+            .sort((x, y) => x.flat.localeCompare(y.flat, "en", { numeric: true })),
+        });
+      }
+    };
+    try {
+      // a few batches at a time: a 500-flat society takes seconds, not minutes
+      let next = 0;
+      const worker = async () => {
+        while (next < batches.length) {
+          const i = next++;
+          const res = unwrap<{ results: SendAccessResult[]; preview?: Preview; society?: string }>(
+            await client.mutations.sendResidentAccess({
+              societyId,
+              flatIds: batches[i],
+              origin: window.location.origin,
+              replaceExisting: replace,
+              ...(mode === "all" ? { includeUncontacted: true, returnCodes: true } : {}),
+            })
+          );
+          if (res.society) society = res.society;
+          byBatch[i] = res.results;
+          if (res.preview) setPreview((p) => p ?? res.preview!);
+          done += batches[i].length;
+          setProgress({ done, total: ids.length });
+          collect();
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(3, batches.length) }, worker));
     } catch (err) {
       setError(err);
     } finally {
+      collect();
       setProgress(null);
       await onChanged();
     }
@@ -110,16 +157,17 @@ export default function ResidentContacts({ societyId, flats, onChanged }: { soci
 
   const count = (s: SendAccessResult["status"]) => results?.filter((r) => r.status === s) ?? [];
   const autoSent = results?.reduce((n, r) => n + r.sentTo.length, 0) ?? 0;
+  // in "give all" mode, flats with no contact are expected (their codes are on the sheet), not problems
   const problems = results?.filter((r) => r.status === "skipped" || r.status === "failed" || r.reason) ?? [];
   const nextTap = taps.find((t) => !tapped.has(t.key));
   const markTapped = (key: string) => setTapped((prev) => new Set(prev).add(key));
 
   return (
-    <Card title="Send residents their login">
+    <Card title="Resident access">
       <div className="space-y-4 text-sm">
         <p className="text-slate-600">
-          Add the resident emails and mobile numbers you already have, and AquaLedger sends each flat its login: the <b>flat number</b> and a private <b>access code</b>, by email
-          and WhatsApp. Residents don&apos;t sign up or set a password.
+          Residents log in with their <b>flat number</b> and a private <b>access code</b>: no sign-up, no password. Give every flat its code in one go. Flats with a saved email or
+          mobile are sent their login (email and WhatsApp), and you get a sheet of all the codes to print as slips or share.
         </p>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-slate-700">
           <span>
@@ -193,11 +241,20 @@ export default function ResidentContacts({ societyId, flats, onChanged }: { soci
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => send("all")} disabled={!toGiveAll.length || Boolean(progress)} className="bg-emerald-600 hover:bg-emerald-700">
+              {progress
+                ? `Working… ${progress.done} of ${progress.total} flats`
+                : !toGiveAll.length
+                  ? "Every flat has access ✓"
+                  : toGiveAll.length === flats.length
+                  ? `Give access to all ${flats.length} flats`
+                  : `Give access to the ${toGiveAll.length} flat${toGiveAll.length === 1 ? "" : "s"} without it`}
+            </Button>
+            <Button variant="secondary" onClick={() => send("contacts")} disabled={!toSend.length || Boolean(progress)}>
+              Send logins to {toSend.length} flat{toSend.length === 1 ? "" : "s"} with contacts
+            </Button>
             <Button variant="secondary" onClick={() => (setImporting(true), setSavedMsg(null))}>
               Add emails &amp; mobiles
-            </Button>
-            <Button onClick={send} disabled={!toSend.length || Boolean(progress)} className="bg-emerald-600 hover:bg-emerald-700">
-              {progress ? `Sending… ${progress.done} of ${progress.total} flats` : `Send logins to ${toSend.length} flat${toSend.length === 1 ? "" : "s"}`}
             </Button>
             <label className="flex items-center gap-2 text-slate-600">
               <input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} className="h-4 w-4" />
@@ -216,12 +273,61 @@ export default function ResidentContacts({ societyId, flats, onChanged }: { soci
         {results && results.length > 0 && (
           <div className="space-y-3 rounded-xl border border-slate-200 p-4">
             <div className="font-medium text-slate-800">
-              {count("sent").length + count("manual").length} flats got a new code
+              {count("sent").length + count("manual").length + count("issued").length} flats got a new code
               {autoSent > 0 && ` · ${DEMO ? "prepared" : "sent"} ${autoSent} message${autoSent === 1 ? "" : "s"} automatically`}
               {taps.length > 0 && ` · ${taps.length} WhatsApp${taps.length === 1 ? "" : "s"} to send from your phone`}
               {count("skipped").length > 0 && ` · skipped ${count("skipped").length}`}
               {count("failed").length > 0 && <span className="text-rose-700"> · {count("failed").length} failed</span>}
             </div>
+
+            {sheet && sheet.rows.length > 0 && (
+              <div className="space-y-2 rounded-lg border-2 border-dashed border-emerald-300 bg-white p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-slate-800">
+                    <b>Access codes for {sheet.rows.length} flats.</b> Save or print them now: for security they can&apos;t be shown again.
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="secondary" onClick={() => downloadAccessCsv(sheet.rows, sheet.society)}>
+                      Download CSV
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (!printAccessSlips(sheet.rows, sheet.society, `${window.location.origin}/resident/`)) setError(new Error("Allow pop-ups for this site to print the slips."));
+                      }}
+                    >
+                      Print slips
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={async () => {
+                        const text = sheet.rows.map((r) => `${r.flat}\t${formatAccessCode(r.code)}\t${r.link}`).join("\n");
+                        await navigator.clipboard.writeText(text).catch(() => {});
+                        setSheetCopied(true);
+                        setTimeout(() => setSheetCopied(false), 2000);
+                      }}
+                    >
+                      {sheetCopied ? "Copied ✓" : "Copy all"}
+                    </Button>
+                  </div>
+                </div>
+                <div className="max-h-56 overflow-auto rounded-lg bg-slate-50">
+                  <table id="access-sheet" className="w-full text-xs">
+                    <tbody>
+                      {sheet.rows.map((r) => (
+                        <tr key={r.flat} className="border-b border-slate-100 last:border-0">
+                          <td className="px-3 py-1.5 font-medium">{r.flat}</td>
+                          <td className="px-3 py-1.5 font-mono tracking-wider">{formatAccessCode(r.code)}</td>
+                          <td className="hidden px-3 py-1.5 text-slate-500 sm:table-cell">
+                            <span className="break-all">{r.link}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {taps.length > 0 && (
               <div className="space-y-2 rounded-lg bg-emerald-50 p-3">

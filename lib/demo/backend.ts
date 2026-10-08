@@ -340,7 +340,19 @@ export const demoClient = {
       persist();
       return ok({ code, flat: flatLabel(flat), issuedAt, society: db.society?.name });
     },
-    sendResidentAccess: async ({ flatIds, origin, replaceExisting }: { flatIds: string[]; origin: string; replaceExisting?: boolean }) => {
+    sendResidentAccess: async ({
+      flatIds,
+      origin,
+      replaceExisting,
+      includeUncontacted,
+      returnCodes,
+    }: {
+      flatIds: string[];
+      origin: string;
+      replaceExisting?: boolean;
+      includeUncontacted?: boolean;
+      returnCodes?: boolean;
+    }) => {
       const society = ensure();
       await pause();
       const results = [];
@@ -354,7 +366,7 @@ export const demoClient = {
         const label = flatLabel(flat);
         const emails = (flat.residentEmails ?? []).filter((e): e is string => Boolean(e));
         const phones = (flat.residentPhones ?? []).filter((p): p is string => Boolean(p));
-        if (!emails.length && !phones.length) results.push({ flatId, flat: label, status: "skipped", sentTo: [], reason: "No email or mobile on file" });
+        if (!emails.length && !phones.length && !includeUncontacted) results.push({ flatId, flat: label, status: "skipped", sentTo: [], reason: "No email or mobile on file" });
         else if (flat.accessCodeHash && !replaceExisting) results.push({ flatId, flat: label, status: "skipped", sentTo: [], reason: "Already has access" });
         else {
           const code = generateAccessCode();
@@ -363,7 +375,14 @@ export const demoClient = {
           const mail = accessEmail({ societyName: society.name, flat: label, code, link: residentLink(base, code), portalUrl: `${base}/resident/` });
           if (emails.length) preview ??= { to: emails.join(", "), subject: mail.subject, text: mail.text };
           // emails are "sent" (simulated); WhatsApp is the committee's one tap, as on a backend without a Business number
-          results.push({ flatId, flat: label, status: emails.length ? "sent" : "manual", sentTo: emails, ...(phones.length ? { manualPhones: phones, code } : {}) });
+          results.push({
+            flatId,
+            flat: label,
+            status: emails.length ? "sent" : phones.length ? "manual" : "issued",
+            sentTo: emails,
+            ...(phones.length ? { manualPhones: phones } : {}),
+            ...(phones.length || returnCodes ? { code } : {}),
+          });
         }
       }
       persist();

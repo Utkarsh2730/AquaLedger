@@ -59,7 +59,7 @@ export const residentWhatsAppEnabled: boolean = !DEMO && Boolean((outputs as { c
 export type SendAccessResult = {
   flatId: string;
   flat: string;
-  status: "sent" | "manual" | "skipped" | "failed";
+  status: "sent" | "manual" | "issued" | "skipped" | "failed";
   sentTo: string[];
   manualPhones?: string[];
   code?: string;

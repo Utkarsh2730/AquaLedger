@@ -226,6 +226,29 @@ describe("sending residents their login", () => {
   });
 });
 
+describe("giving every flat access at once", () => {
+  it("issues a code to each flat, sends where it can, and returns every code to the committee", async () => {
+    const created: any = await adminOps(appsync("setupSociety", { name: "Green Meadows", blocks: ["a"], flatsPerBlock: 4 }));
+    const sid = created.societyId;
+    const admin = [sid, "ADMINS"];
+    const flats = [...tbl("FLAT-table").values()].sort((x, y) => x.number.localeCompare(y.number));
+    flats[0].residentPhones = ["+919876543210"];
+    flats[1].residentEmails = ["only-email@example.com"]; // email isn't set up here
+    const all = (extra = {}) =>
+      adminOps(appsync("sendResidentAccess", { societyId: sid, flatIds: flats.map((f) => f.id), origin: "https://aqua.example", includeUncontacted: true, returnCodes: true, ...extra }, admin)) as Promise<any>;
+
+    const res = await all();
+    expect(res.results.map((r: any) => r.status)).toEqual(["manual", "issued", "issued", "issued"]);
+    for (const r of res.results) {
+      const portal: any = await queryApi({ typeName: "Query", fieldName: "residentPortal", arguments: { code: r.code }, identity: null } as any);
+      expect(portal.flat.label).toBe(r.flat);
+    }
+    // running it again leaves them alone, unless asked to replace
+    expect((await all()).results.every((r: any) => r.status === "skipped" && r.reason === "Already has access")).toBe(true);
+    expect((await all({ replaceExisting: true })).results.every((r: any) => r.code)).toBe(true);
+  });
+});
+
 describe("end-to-end through the Lambda handlers", () => {
   it("onboards a society with demo data, finds the planted leak, bills and answers questions", async () => {
     const created: any = await adminOps(appsync("setupSociety", { name: "Green Meadows", city: "Pune", blocks: ["a", "b", "c", "d"], flatsPerBlock: 10, seedDemo: true }));

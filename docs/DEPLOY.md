@@ -75,6 +75,11 @@ residents their login**, the committee pastes or uploads its resident list
 (`A-101, rahul@gmail.com, 98765 43210`). AquaLedger then sends every flat its login (the flat number
 plus a private access code, with a one-tap link) to each email and mobile number on file.
 
+**Give access to all flats** does every flat in one click. Flats with an email or mobile on file are
+sent their login. The committee gets a sheet of every new code, to **Download CSV**, **Print slips**
+(two per row, to cut out and drop in letterboxes), or **Copy all**. Codes are stored only as hashes,
+so save or print the sheet before leaving the page.
+
 ### WhatsApp
 
 **Works with no setup (free):** after **Send logins**, AquaLedger lists every mobile number with an

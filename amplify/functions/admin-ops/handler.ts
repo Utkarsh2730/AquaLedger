@@ -33,7 +33,11 @@ export const handler = async (event: ResolverEvent<Args>) => {
       return issueResidentAccess(a.societyId, a.flatId);
     case "sendResidentAccess":
       assertSocietyAdmin(event.identity, a.societyId);
-      return sendResidentAccess(a.societyId, a.flatIds ?? [], String(a.origin ?? ""), Boolean(a.replaceExisting));
+      return sendResidentAccess(a.societyId, a.flatIds ?? [], String(a.origin ?? ""), {
+        replaceExisting: Boolean(a.replaceExisting),
+        includeUncontacted: Boolean(a.includeUncontacted),
+        returnCodes: Boolean(a.returnCodes),
+      });
     case "revokeResidentAccess":
       assertSocietyAdmin(event.identity, a.societyId);
       return revokeResidentAccess(a.societyId, a.flatId);
@@ -206,8 +210,11 @@ async function revokeResidentAccess(societyId: string, flatId: string) {
 type SendResult = {
   flatId: string;
   flat: string;
-  /** sent: delivered automatically to someone; manual: WhatsApp numbers waiting for the committee's tap */
-  status: "sent" | "manual" | "skipped" | "failed";
+  /**
+   * sent: delivered automatically to someone; manual: WhatsApp numbers waiting for the committee's
+   * tap; issued: a code with nobody to send it to (only with includeUncontacted)
+   */
+  status: "sent" | "manual" | "issued" | "skipped" | "failed";
   sentTo: string[];
   /** numbers the committee sends to from its own WhatsApp (when automatic WhatsApp is off or failed) */
   manualPhones?: string[];
@@ -224,7 +231,12 @@ type SendResult = {
  * so sending means issuing a new one; flats that already have access are skipped unless
  * replaceExisting is set. If nobody could be reached, the flat's previous access is put back.
  */
-async function sendResidentAccess(societyId: string, flatIds: string[], origin: string, replaceExisting: boolean) {
+async function sendResidentAccess(
+  societyId: string,
+  flatIds: string[],
+  origin: string,
+  { replaceExisting = false, includeUncontacted = false, returnCodes = false } = {}
+) {
   const base = origin.replace(/\/$/, "");
   if (!/^https?:\/\/[^\s/]+$/.test(base)) throw new Error("Invalid site address");
   if (flatIds.length > SEND_BATCH) throw new Error(`Send at most ${SEND_BATCH} flats per request`);
@@ -245,7 +257,7 @@ async function sendResidentAccess(societyId: string, flatIds: string[], origin: 
     const label = `${flat.block}-${flat.number}`;
     const emails = (flat.residentEmails ?? []).filter((e): e is string => Boolean(e));
     const phones = (flat.residentPhones ?? []).filter((p): p is string => Boolean(p));
-    if (!phones.length && !(emailOn && emails.length)) {
+    if (!phones.length && !(emailOn && emails.length) && !includeUncontacted) {
       results.push({
         flatId,
         flat: label,
@@ -295,8 +307,8 @@ async function sendResidentAccess(societyId: string, flatIds: string[], origin: 
       }
     }
 
-    if (!sentTo.length && !manualPhones.length) {
-      // nobody received the new code: keep the old one working
+    if (!sentTo.length && !manualPhones.length && !returnCodes) {
+      // nobody received the new code (and the committee isn't getting it either): keep the old one working
       await setFlatAccess(flatId, previous.hash, previous.at);
       results.push({ flatId, flat: label, status: "failed", sentTo, reason: errors.join(" · ") });
       continue;
@@ -304,9 +316,10 @@ async function sendResidentAccess(societyId: string, flatIds: string[], origin: 
     results.push({
       flatId,
       flat: label,
-      status: sentTo.length ? "sent" : "manual",
+      status: sentTo.length ? "sent" : manualPhones.length ? "manual" : "issued",
       sentTo,
-      ...(manualPhones.length ? { manualPhones, code } : {}),
+      ...(manualPhones.length ? { manualPhones } : {}),
+      ...(manualPhones.length || returnCodes ? { code } : {}),
       ...(errors.length ? { reason: `Not delivered to ${errors.join(" · ")}` } : {}),
     });
   }

@@ -172,7 +172,16 @@ const schema = a
     // sends each listed flat a fresh access code by email/WhatsApp (the old one stops working); a few flats per call
     sendResidentAccess: a
       .mutation()
-      .arguments({ societyId: a.id().required(), flatIds: a.id().array().required(), origin: a.string().required(), replaceExisting: a.boolean() })
+      .arguments({
+        societyId: a.id().required(),
+        flatIds: a.id().array().required(),
+        origin: a.string().required(),
+        replaceExisting: a.boolean(),
+        // "give access to all flats": issue a code even to flats with no contact on file, and hand
+        // every new code back so the committee can print or share them
+        includeUncontacted: a.boolean(),
+        returnCodes: a.boolean(),
+      })
       .returns(a.json())
       .authorization((allow) => [allow.authenticated()])
       .handler(a.handler.function(adminOps)),
