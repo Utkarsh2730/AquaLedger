@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { DemoBanner, useSession } from "./Auth";
 import { useSociety } from "./SocietyContext";
 import { client } from "@/lib/client";
+import { recordVisit } from "@/lib/navHistory";
 import {
   AlertIcon,
   BuildingIcon,
@@ -85,6 +86,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const { society, openAlerts } = useShellInfo(societyId, pathname);
 
   useEffect(() => setOpen(false), [pathname]);
+  // page history for Back buttons (lib/navHistory)
+  useEffect(() => recordVisit(pathname + window.location.search), [pathname]);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);

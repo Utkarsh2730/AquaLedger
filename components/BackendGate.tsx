@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { BACKEND_MISSING, BACKEND_READY } from "@/lib/client";
+import BackLink from "./BackLink";
 
 /**
  * App pages need the AWS backend. When amplify_outputs.json is only the placeholder (fresh copy
@@ -30,9 +31,7 @@ export default function BackendGate({ children }: { children: ReactNode }) {
             <pre className="mt-2 rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-100">npm run demo</pre>
           </div>
         </div>
-        <a href="/" className="mt-6 inline-block text-sm font-medium text-brand-700 hover:underline">
-          ← Back to the home page
-        </a>
+        <BackLink fallback="/" fallbackLabel="Back to home" remember={false} className="mt-6" />
       </div>
     </div>
   );

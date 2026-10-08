@@ -115,3 +115,4 @@ export const KeyIcon = (p: P) =>
       <path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2" />
     </>
   );
+export const ArrowLeftIcon = (p: P) => svg(p, <path d="M19 12H5M11 18l-6-6 6-6" />);

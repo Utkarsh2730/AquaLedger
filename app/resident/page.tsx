@@ -5,6 +5,8 @@ import { fetchAuthSession } from "aws-amplify/auth";
 import { DemoBanner } from "@/components/Auth";
 import AuthLayout from "@/components/AuthLayout";
 import BackendGate from "@/components/BackendGate";
+import BackLink from "@/components/BackLink";
+import { LogoutIcon } from "@/components/icons";
 import { client, DEMO, inr, unwrap } from "@/lib/client";
 import { Button, Card, ErrorBox, Spinner } from "@/components/ui";
 import FlatUsage from "@/components/FlatUsage";
@@ -93,6 +95,7 @@ function PortalView({ data, onLeave }: { data: Portal; onLeave: () => void }) {
   const [bill, setBill] = useState<BillRec | null>(null);
   return (
     <div className="mx-auto max-w-5xl p-4 md:p-8">
+      <BackLink fallback="/" fallbackLabel="Back to home" remember={false} className="mb-2" />
       <header className="mb-6 flex items-center justify-between gap-4">
         <div>
           <div className="text-lg font-semibold text-emerald-700">💧 AquaLedger · Resident</div>
@@ -100,7 +103,12 @@ function PortalView({ data, onLeave }: { data: Portal; onLeave: () => void }) {
             {data.society.name} · Flat {data.flat.label}
           </div>
         </div>
-        <button onClick={onLeave} className="text-sm text-slate-600 hover:underline">
+        <button
+          onClick={onLeave}
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm! font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          title="Close this flat on this device"
+        >
+          <LogoutIcon width={16} height={16} />
           Close flat
         </button>
       </header>

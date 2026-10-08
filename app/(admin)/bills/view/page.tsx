@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { client, inr, type BillModel } from "@/lib/client";
 import type { Schema } from "@/amplify/data/resource";
 import { useSociety } from "@/components/SocietyContext";
+import BackLink from "@/components/BackLink";
 import { Button, ErrorBox, Spinner } from "@/components/ui";
 import { monthLabel } from "@/lib/core/time";
 
@@ -40,10 +41,8 @@ function BillView() {
   ];
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="no-print mb-4 flex justify-end gap-2">
-        <Button variant="secondary" onClick={() => history.back()}>
-          Back
-        </Button>
+      <div className="no-print mb-4 flex items-center justify-between gap-2">
+        <BackLink fallback="/bills" fallbackLabel="All bills" />
         <Button onClick={() => window.print()}>Download PDF / Print</Button>
       </div>
       <article className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm print:border-0 print:shadow-none">

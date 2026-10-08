@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import BackLink from "./BackLink";
 import { AlertIcon, GaugeIcon, HomeIcon, ReceiptIcon, TruckIcon } from "@/components/landing/Icons";
 
 export type AuthRole = "committee" | "resident";
@@ -97,9 +98,7 @@ export default function AuthLayout({ role, children }: { role: AuthRole; childre
     <div className="min-h-screen bg-white lg:grid lg:grid-cols-[1.05fr_1fr]">
       <aside className={`relative overflow-hidden bg-gradient-to-br ${r.panel} px-6 pb-8 pt-6 text-white lg:flex lg:flex-col lg:px-12 lg:py-10`}>
         <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-        <Link href="/" className="relative inline-flex items-center gap-1.5 rounded-lg py-1 pr-2 text-sm font-medium text-white/80 hover:text-white">
-          <span aria-hidden>←</span> Back to home
-        </Link>
+        <BackLink fallback="/" fallbackLabel="Back to home" tone="dark" remember={false} className="relative" />
         <div className="relative mt-6 lg:mt-auto">
           <div className="text-lg font-semibold">💧 AquaLedger</div>
           <span className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ring-1 ${r.badgeTone}`}>{r.badge}</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Badge, Card, Empty, Stat, Table, Td } from "./ui";
 import { FlatVsAverageChart } from "./charts";
 import { inr, kl } from "@/lib/client";
@@ -49,7 +50,7 @@ export default function FlatUsage({ detail, bills, billHref }: { detail: Omit<Fl
           <Table head={["Month", "Used", "Share", "Amount", "Status"]}>
             {bills.map((b) => (
               <tr key={b.id}>
-                <Td>{billHref ? <a href={billHref(b)} className="font-medium text-brand-700 hover:underline">{monthLabel(b.month)}</a> : monthLabel(b.month)}</Td>
+                <Td>{billHref ? <Link href={billHref(b)} className="font-medium text-brand-700 hover:underline">{monthLabel(b.month)}</Link> : monthLabel(b.month)}</Td>
                 <Td>{kl(b.litres)}</Td>
                 <Td>{b.sharePct.toFixed(2)}%</Td>
                 <Td className="font-semibold">{inr(b.amount)}</Td>
