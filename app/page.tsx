@@ -75,6 +75,7 @@ export default function Landing() {
             <DropIcon className="h-6 w-6 fill-cyan-500 stroke-cyan-600" /> AquaLedger
           </Link>
           <nav className="flex items-center gap-1 text-sm sm:gap-4">
+            <TourVideo />
             <a href="#how" className="hidden px-2 text-slate-600 hover:text-slate-900 md:block">How it works</a>
             <a href="#features" className="hidden px-2 text-slate-600 hover:text-slate-900 md:block">Features</a>
             <a href="#pricing" className="hidden px-2 text-slate-600 hover:text-slate-900 sm:block">Pricing</a>
@@ -90,7 +91,7 @@ export default function Landing() {
       {/* hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_75%_10%,#cffafe_0%,transparent_70%),radial-gradient(40%_40%_at_0%_100%,#ecfdf5_0%,transparent_70%)]" />
-        <div className="mx-auto grid max-w-6xl items-start gap-10 px-4 pb-12 pt-12 md:px-6 lg:grid-cols-[1fr_1.1fr] lg:pb-20 lg:pt-16">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-12 pt-12 md:px-6 lg:grid-cols-[1fr_1.1fr] lg:pb-20 lg:pt-20">
           <div>
             <Pill>💧 For apartment societies, RWAs and facility managers</Pill>
             <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight md:text-6xl">
@@ -116,7 +117,9 @@ export default function Landing() {
               ))}
             </ul>
           </div>
-          <TourVideo className="lg:-mr-2 lg:mt-1" />
+          <div className="relative">
+            <SocietyScene className="w-full" />
+          </div>
         </div>
       </section>
 
@@ -180,9 +183,21 @@ export default function Landing() {
             ))}
           </div>
         </div>
-        <div className="rounded-3xl bg-gradient-to-br from-slate-50 to-cyan-50 p-4 ring-1 ring-slate-100 md:p-6">
-          <SocietyScene className="w-full" />
-          <p className="mt-2 text-center text-sm text-slate-500">Three sources feed one tank. AquaLedger meters each flat, so a leak in B-202 stands out.</p>
+        <div className="rounded-3xl bg-gradient-to-br from-slate-50 to-cyan-50 p-6 ring-1 ring-slate-100">
+          <div className="grid grid-cols-3 gap-3 text-center">
+            {[
+              { label: "Municipal", price: "₹22/kL", color: "bg-cyan-600", h: "h-10" },
+              { label: "Borewell", price: "₹9/kL", color: "bg-lime-600", h: "h-6" },
+              { label: "Tanker", price: "₹186/kL", color: "bg-amber-500", h: "h-48" },
+            ].map((s) => (
+              <div key={s.label} className="flex flex-col items-center justify-end">
+                <div className="text-lg font-semibold">{s.price}</div>
+                <div className={`mt-2 w-full max-w-20 rounded-t-lg ${s.color} ${s.h}`} />
+                <div className="mt-2 text-sm text-slate-600">{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-6 text-center text-sm text-slate-500">Cost per kilolitre by source in the demo society. A leak is paid for at the tanker price.</p>
         </div>
       </section>
 
