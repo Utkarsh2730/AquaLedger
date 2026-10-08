@@ -275,3 +275,35 @@ describe("resident contact import", () => {
     expect(msg.template.components[0].parameters.map((p) => p.text)).toEqual(["Green Meadows", "A-101", "K7M2-QX9P-4HDR", "https://x"]);
   });
 });
+
+import { readFileSync } from "node:fs";
+import { missingBackendFeatures, REQUIRED_BACKEND } from "./backendCheck";
+import introspectionBeforeBulk from "./fixtures/introspection-before-bulk.json";
+import introspectionCurrent from "./fixtures/introspection-current.json";
+
+describe("backend version check", () => {
+  it("lists exactly the custom operations defined in the schema", () => {
+    const schema = readFileSync(new URL("../../amplify/data/resource.ts", import.meta.url), "utf8");
+    const ops = [...schema.matchAll(/\n {4}(\w+): a\s*\n\s*\.(query|mutation)\(\)/g)].map(([, name, kind]) => `${kind}:${name}`).sort();
+    const required = [...Object.keys(REQUIRED_BACKEND.queries).map((q) => `query:${q}`), ...Object.keys(REQUIRED_BACKEND.mutations).map((m) => `mutation:${m}`)].sort();
+    expect(required).toEqual(ops);
+  });
+
+  it("accepts a backend deployed from this code (from a CDK synth of amplify/)", () => {
+    expect(missingBackendFeatures(introspectionCurrent)).toEqual([]);
+  });
+
+  it("spots a backend deployed before the latest change", () => {
+    expect(missingBackendFeatures(introspectionBeforeBulk)).toEqual(["sendResidentAccess (includeUncontacted, returnCodes)"]);
+  });
+
+  it("spots a much older backend, and can't tell without introspection", () => {
+    const old = structuredClone(introspectionBeforeBulk) as any;
+    delete old.mutations.sendResidentAccess;
+    delete old.queries.residentPortal;
+    delete old.models.Flat.fields.residentPhones;
+    expect(missingBackendFeatures(old)).toEqual(["residentPortal", "sendResidentAccess", "Flat.residentPhones"]);
+    expect(missingBackendFeatures(undefined)).toBeNull();
+    expect(missingBackendFeatures({} as any)).toBeNull();
+  });
+});

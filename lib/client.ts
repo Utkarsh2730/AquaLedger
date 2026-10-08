@@ -5,6 +5,7 @@ import { fetchAuthSession } from "aws-amplify/auth";
 import type { Schema } from "@/amplify/data/resource";
 import outputs from "@/amplify_outputs.json";
 import { DEMO_SOCIETY_ID, demoClient, demoIngest } from "@/lib/demo/backend";
+import { missingBackendFeatures, type ModelIntrospection } from "@/lib/core/backendCheck";
 
 /** `npm run demo`: everything runs in the browser against lib/demo/backend.ts, no AWS needed. */
 export const DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
@@ -12,6 +13,10 @@ export const DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
 /** true when amplify_outputs.json describes a deployed backend (not the placeholder) */
 const realOutputs = outputs as { auth?: { user_pool_id?: string }; data?: { url?: string } };
 export const BACKEND_READY = DEMO || Boolean(realOutputs.auth?.user_pool_id && realOutputs.data?.url);
+
+/** what this app needs that the deployed backend doesn't have yet (code updated, sandbox not redeployed) */
+export const BACKEND_MISSING: string[] =
+  DEMO || !BACKEND_READY ? [] : (missingBackendFeatures((outputs as { data?: { model_introspection?: ModelIntrospection } }).data?.model_introspection) ?? []);
 
 type DataClient = ReturnType<typeof generateClient<Schema>>;
 export const client: DataClient = DEMO || !BACKEND_READY ? (demoClient as unknown as DataClient) : generateClient<Schema>();

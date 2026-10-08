@@ -1,0 +1,204 @@
+{
+ "queries": {
+  "getDashboard": {
+   "arguments": {
+    "societyId": {}
+   }
+  },
+  "getFlatDetail": {
+   "arguments": {
+    "societyId": {},
+    "flatId": {}
+   }
+  },
+  "askWaterData": {
+   "arguments": {
+    "societyId": {},
+    "question": {}
+   }
+  },
+  "systemCheck": {
+   "arguments": {
+    "societyId": {}
+   }
+  },
+  "residentPortal": {
+   "arguments": {
+    "code": {}
+   }
+  }
+ },
+ "mutations": {
+  "setupSociety": {
+   "arguments": {
+    "name": {},
+    "city": {},
+    "blocks": {},
+    "flatsPerBlock": {},
+    "commonCharge": {},
+    "seedDemo": {}
+   }
+  },
+  "seedDemoData": {
+   "arguments": {
+    "societyId": {}
+   }
+  },
+  "issueResidentAccess": {
+   "arguments": {
+    "societyId": {},
+    "flatId": {}
+   }
+  },
+  "sendResidentAccess": {
+   "arguments": {
+    "societyId": {},
+    "flatIds": {},
+    "origin": {},
+    "replaceExisting": {},
+    "includeUncontacted": {},
+    "returnCodes": {}
+   }
+  },
+  "revokeResidentAccess": {
+   "arguments": {
+    "societyId": {},
+    "flatId": {}
+   }
+  },
+  "inviteAdmin": {
+   "arguments": {
+    "societyId": {},
+    "email": {}
+   }
+  },
+  "importReadingsCsv": {
+   "arguments": {
+    "societyId": {},
+    "csv": {}
+   }
+  },
+  "runAnalysis": {
+   "arguments": {
+    "societyId": {},
+    "task": {},
+    "month": {}
+   }
+  }
+ },
+ "models": {
+  "Society": {
+   "fields": {
+    "societyId": {},
+    "name": {},
+    "city": {},
+    "flatCount": {},
+    "commonCharge": {},
+    "tzOffsetMinutes": {},
+    "deviceToken": {},
+    "adminEmails": {},
+    "lastNightlyScanAt": {},
+    "createdAt": {},
+    "updatedAt": {}
+   }
+  },
+  "Flat": {
+   "fields": {
+    "id": {},
+    "societyId": {},
+    "block": {},
+    "number": {},
+    "occupants": {},
+    "accessCodeHash": {},
+    "accessIssuedAt": {},
+    "residentEmails": {},
+    "residentPhones": {},
+    "createdAt": {},
+    "updatedAt": {}
+   }
+  },
+  "Reading": {
+   "fields": {
+    "id": {},
+    "societyId": {},
+    "flatId": {},
+    "timestamp": {},
+    "periodMinutes": {},
+    "litres": {},
+    "source": {},
+    "createdAt": {},
+    "updatedAt": {}
+   }
+  },
+  "TankerDelivery": {
+   "fields": {
+    "id": {},
+    "societyId": {},
+    "vendor": {},
+    "litres": {},
+    "cost": {},
+    "date": {},
+    "createdAt": {},
+    "updatedAt": {}
+   }
+  },
+  "SourceSupply": {
+   "fields": {
+    "id": {},
+    "societyId": {},
+    "type": {},
+    "litres": {},
+    "cost": {},
+    "date": {},
+    "createdAt": {},
+    "updatedAt": {}
+   }
+  },
+  "Bill": {
+   "fields": {
+    "id": {},
+    "societyId": {},
+    "flatId": {},
+    "flatLabel": {},
+    "month": {},
+    "litres": {},
+    "sharePct": {},
+    "usageCharge": {},
+    "commonCharge": {},
+    "amount": {},
+    "totalWaterCost": {},
+    "status": {},
+    "createdAt": {},
+    "updatedAt": {}
+   }
+  },
+  "Alert": {
+   "fields": {
+    "id": {},
+    "societyId": {},
+    "flatId": {},
+    "flatLabel": {},
+    "type": {},
+    "severity": {},
+    "message": {},
+    "detectedAt": {},
+    "resolved": {},
+    "wasteLitresPerDay": {},
+    "createdAt": {},
+    "updatedAt": {}
+   }
+  },
+  "Insight": {
+   "fields": {
+    "id": {},
+    "societyId": {},
+    "month": {},
+    "summaryText": {},
+    "forecast": {},
+    "generatedBy": {},
+    "createdAt": {},
+    "updatedAt": {}
+   }
+  }
+ }
+}
