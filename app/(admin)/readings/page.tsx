@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { client, flatLabelOf, listAll, loadFlats, unwrap, type FlatModel } from "@/lib/client";
+import { client, flatLabelOf, fmtDateTime, listAll, loadFlats, unwrap, type FlatModel } from "@/lib/client";
 import type { Schema } from "@/amplify/data/resource";
 import { localToUtcIso } from "@/lib/core/time";
 import { useSociety } from "@/components/SocietyContext";
@@ -140,7 +140,7 @@ export default function ReadingsPage() {
           <Table head={["Time", "Flat", "Interval", "Litres", "Source"]}>
             {recent.map((r) => (
               <tr key={r.id}>
-                <Td>{new Date(r.timestamp).toLocaleString("en-IN")}</Td>
+                <Td>{fmtDateTime(r.timestamp)}</Td>
                 <Td>{labels.get(r.flatId) ?? r.flatId}</Td>
                 <Td>{r.periodMinutes >= 1440 ? "day" : r.periodMinutes >= 60 ? "hour" : `${r.periodMinutes} min`}</Td>
                 <Td>{r.litres.toLocaleString("en-IN")}</Td>

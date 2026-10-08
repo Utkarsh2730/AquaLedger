@@ -83,7 +83,7 @@ export default function InsightsPage() {
         <>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <Stat label={`Demand · ${monthLabel(f.month)}`} value={kl(f.demandLitres)} hint={`seasonal factor ×${f.seasonalFactor}`} />
-            <Stat label="Expected free-ish supply" value={kl(f.municipalLitres + f.borewellLitres)} hint={`${kl(f.municipalLitres)} municipal · ${kl(f.borewellLitres)} borewell`} />
+            <Stat label="Expected own supply" value={kl(f.municipalLitres + f.borewellLitres)} hint={`${kl(f.municipalLitres)} municipal · ${kl(f.borewellLitres)} borewell`} />
             <Stat label="Tankers to book" value={f.tankers} tone={f.tankers > 0 ? "bad" : "good"} hint={`${kl(f.shortfallLitres)} shortfall · ${kl(f.tankerLitres, 0)} each`} />
             <Stat label="Tanker budget" value={inr(f.tankerCost)} hint={`~${inr(f.tankerUnitCost)} per tanker`} />
           </div>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { useAuthenticator } from "@aws-amplify/ui-react";
+import { DemoBanner, useSession } from "./Auth";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -19,7 +19,7 @@ const NAV = [
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { signOut, user } = useAuthenticator((c) => [c.user]);
+  const { signOut, loginId } = useSession();
   const [open, setOpen] = useState(false);
   const nav = (
     <nav className="space-y-1">
@@ -40,6 +40,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     </nav>
   );
   return (
+    <>
+    <DemoBanner />
     <div className="min-h-screen md:flex">
       <aside className="no-print hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white p-4 md:flex">
         <Link href="/dashboard" className="mb-6 flex items-center gap-2 px-2 text-lg font-semibold text-brand-700">
@@ -47,7 +49,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </Link>
         {nav}
         <div className="mt-auto border-t border-slate-200 pt-4 text-xs text-slate-500">
-          <div className="truncate px-2">{user?.signInDetails?.loginId}</div>
+          <div className="truncate px-2">{loginId}</div>
           <button onClick={signOut} className="mt-2 px-2 font-medium text-slate-700 hover:underline">
             Sign out
           </button>
@@ -69,5 +71,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       )}
       <main className="flex-1 p-4 md:p-8">{children}</main>
     </div>
+    </>
   );
 }

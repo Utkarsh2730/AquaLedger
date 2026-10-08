@@ -31,6 +31,7 @@ export function buildFacts(d: DashboardSummary, extra: { month?: string; society
     costPerKlBySource: d.costPerKlBySource.map((s) => ({ source: s.source, inrPerKl: s.costPerKl })),
     topFlatsLast30Days: d.topFlats.slice(0, 5).map((f) => ({ flat: f.flatLabel, litres: f.litres, timesAverage: f.vsAverage })),
     openAlerts: extra.openAlerts ?? [],
+    leakImpactLast90Days: d.impact,
     forecastNextMonth: d.forecast,
   };
 }
@@ -52,7 +53,9 @@ export function ruleBasedSummary(d: DashboardSummary, openAlerts: string[] = [])
     if (prev) {
       const dl = pct(last.consumedLitres, prev.consumedLitres);
       const dc = pct(cost, monthCost(prev));
-      parts.push(`That is ${Math.abs(dl)}% ${dl >= 0 ? "more" : "less"} water and ${Math.abs(dc)}% ${dc >= 0 ? "higher" : "lower"} cost than ${monthLabel(prev.month)}.`);
+      const water = Math.abs(dl) < 1 ? "about the same water" : `${Math.abs(dl)}% ${dl > 0 ? "more" : "less"} water`;
+      const spend = Math.abs(dc) < 1 ? "about the same cost" : `${Math.abs(dc)}% ${dc > 0 ? "higher" : "lower"} cost`;
+      parts.push(`That is ${water} and ${spend} than ${monthLabel(prev.month)}.`);
     }
     if (last.tankerCount) {
       const share = cost > 0 ? round((last.tankerCost / cost) * 100) : 0;
@@ -84,6 +87,11 @@ export function ruleBasedAnswer(question: string, d: DashboardSummary, openAlert
     if (last.borewellLitres < prev.borewellLitres * 0.9) reasons.push(`borewell output fell ${kl(prev.borewellLitres - last.borewellLitres)}, so more water had to be bought`);
     if (openAlerts.length) reasons.push(`there ${openAlerts.length === 1 ? "is" : "are"} ${openAlerts.length} open leak alert(s) adding to usage`);
     return `Total water cost went from ${inr(monthCost(prev))} in ${monthLabel(prev.month)} to ${inr(monthCost(last))} in ${monthLabel(last.month)} (${dc >= 0 ? "+" : ""}${inr(dc)}). Main drivers: ${reasons.join("; ") || "no single driver stands out"}.`;
+  }
+  if (/sav|impact|worth|roi|pay for/.test(q)) {
+    const im = d.impact;
+    if (!im.leaksCaught) return "No leaks caught in the last 90 days yet. Each one AquaLedger catches is valued at tanker prices, the water you'd otherwise have to buy.";
+    return `In the last 90 days AquaLedger caught leaks in ${im.leaksCaught} flat${im.leaksCaught > 1 ? "s" : ""} (${im.fixed} fixed, ${im.open} still open). Left running they would waste about ${kl(im.litresPerMonth)} a month, roughly ${inr(im.rupeesPerMonth)} at tanker prices (${inr(im.rupeesPerKl)}/kL). A 40-flat society pays ${inr(40 * 12)} a month for AquaLedger.`;
   }
   if (/leak|alert|waste|drip/.test(q)) {
     return openAlerts.length ? `Open alerts: ${openAlerts.join(" ")}` : "No open leak alerts right now. The nightly scan checks every flat for usage spikes and 2-4 a.m. flow.";

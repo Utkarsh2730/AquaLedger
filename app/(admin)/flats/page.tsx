@@ -14,6 +14,8 @@ export default function FlatsPage() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
+  const [newFlat, setNewFlat] = useState({ block: "", number: "", occupants: 3 });
+  const [adding, setAdding] = useState(false);
 
   const load = useCallback(() => loadFlats(societyId).then(setFlats).catch(setError), [societyId]);
   useEffect(() => {
@@ -34,6 +36,36 @@ export default function FlatsPage() {
     }
   }
 
+  async function addFlat(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setMsg(null);
+    const block = newFlat.block.trim().toUpperCase();
+    const number = newFlat.number.trim().toUpperCase();
+    setAdding(true);
+    try {
+      // check against fresh data, not the list on screen (another admin, or a double click, may have added it)
+      const current = await loadFlats(societyId);
+      if (current.some((f) => f.block === block && f.number === number)) throw new Error(`Flat ${block}-${number} already exists`);
+      const res = await client.models.Flat.create({ societyId, block, number, occupants: newFlat.occupants });
+      if (res.errors?.length) throw new Error(res.errors[0].message);
+      setFlats(await loadFlats(societyId));
+      setMsg(`Added flat ${block}-${number}.`);
+      setNewFlat({ ...newFlat, number: "" });
+    } catch (err) {
+      setError(err);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function removeFlat(f: FlatModel) {
+    if (!confirm(`Remove flat ${flatLabelOf(f)}? Its past readings and bills are kept.`)) return;
+    const res = await client.models.Flat.delete({ id: f.id });
+    if (res.errors?.length) return setError(new Error(res.errors[0].message));
+    load();
+  }
+
   if (!flats) return error ? <ErrorBox error={error} /> : <Spinner />;
   const shown = flats.filter((f) => flatLabelOf(f).toLowerCase().includes(filter.toLowerCase()) || (f.residentEmail ?? "").includes(filter.toLowerCase()));
   return (
@@ -41,6 +73,25 @@ export default function FlatsPage() {
       <PageHeader title="Flats" subtitle={`${flats.length} flats · ${flats.filter((f) => f.residentEmail).length} residents invited`} />
       <ErrorBox error={error} />
       {msg && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{msg}</div>}
+      <Card title="Add a flat">
+        <form onSubmit={addFlat} className="flex flex-wrap items-end gap-3">
+          <label className="text-sm">
+            <span className="mb-1 block font-medium text-slate-700">Block</span>
+            <Input required value={newFlat.block} onChange={(e) => setNewFlat({ ...newFlat, block: e.target.value })} placeholder="E" className="w-20" />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium text-slate-700">Number</span>
+            <Input required value={newFlat.number} onChange={(e) => setNewFlat({ ...newFlat, number: e.target.value })} placeholder="101" className="w-24" />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium text-slate-700">Occupants</span>
+            <Input type="number" min={0} value={newFlat.occupants} onChange={(e) => setNewFlat({ ...newFlat, occupants: Number(e.target.value) })} className="w-24" />
+          </label>
+          <Button type="submit" disabled={adding}>
+            {adding ? "Adding…" : "Add flat"}
+          </Button>
+        </form>
+      </Card>
       <Card action={<Input placeholder="Search flat or email" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />}>
         {shown.length === 0 ? (
           <Empty>No flats match.</Empty>
@@ -71,9 +122,14 @@ export default function FlatsPage() {
                       </Button>
                     </form>
                   ) : (
-                    <Button variant="secondary" onClick={() => setInviting(f.id)}>
-                      {f.residentEmail ? "Re-invite" : "Invite resident"}
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="secondary" onClick={() => setInviting(f.id)}>
+                        {f.residentEmail ? "Re-invite" : "Invite resident"}
+                      </Button>
+                      <Button variant="ghost" onClick={() => removeFlat(f)} aria-label={`Remove ${flatLabelOf(f)}`}>
+                        ✕
+                      </Button>
+                    </div>
                   )}
                 </Td>
               </tr>

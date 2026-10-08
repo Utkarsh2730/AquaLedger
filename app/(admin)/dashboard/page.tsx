@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { client, inr, kl, unwrap } from "@/lib/client";
+import { client, fmtDateTime, inr, kl, unwrap } from "@/lib/client";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, ErrorBox, PageHeader, Spinner, Stat, Table, Td } from "@/components/ui";
 import { CostChart, DailyTrendChart, SourceMixChart } from "@/components/charts";
@@ -95,7 +95,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title={data.society.name ?? "Dashboard"}
-        subtitle={`${data.society.city ? data.society.city + " · " : ""}${k.flats} flats · as of ${new Date(d.asOf).toLocaleString("en-IN")}`}
+        subtitle={`${data.society.city ? data.society.city + " · " : ""}${k.flats} flats · as of ${fmtDateTime(d.asOf)}`}
         action={
           <Button onClick={runAnalysis} disabled={running} variant="secondary">
             {running ? "Running…" : "⚡ Run analysis now"}
@@ -119,6 +119,25 @@ export default function DashboardPage() {
           hint={k.openAlerts ? <Link href="/alerts" className="underline">Review alerts →</Link> : "All clear"}
         />
       </div>
+
+      {d.impact.leaksCaught > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Leak detection impact · last 90 days</div>
+            <div className="mt-1 text-lg font-semibold text-emerald-950">
+              {d.impact.leaksCaught} leak{d.impact.leaksCaught > 1 ? "s" : ""} caught · {kl(d.impact.litresPerMonth)}/month of water · ≈ {inr(d.impact.rupeesPerMonth)}/month at tanker prices
+            </div>
+            <div className="mt-1 text-sm text-emerald-800">
+              {d.impact.fixed} fixed, {d.impact.open} open. AquaLedger costs this society about {inr(k.flats * 12)}/month.
+            </div>
+          </div>
+          {d.impact.open > 0 && (
+            <Link href="/alerts" className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+              Review open leaks →
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Where the water comes from (monthly)" className="lg:col-span-2">
@@ -198,7 +217,10 @@ export default function DashboardPage() {
         )}
         {lastComplete && prevMonths.length > 1 && (
           <p className="mt-3 text-xs text-slate-500">
-            {monthLabel(lastComplete.month)} use was {pct(lastComplete.consumedLitres, prevMonths[prevMonths.length - 2].consumedLitres)}% vs the month before.
+            {(() => {
+              const p = pct(lastComplete.consumedLitres, prevMonths[prevMonths.length - 2].consumedLitres);
+              return p === 0 ? `${monthLabel(lastComplete.month)} use was about the same as the month before.` : `${monthLabel(lastComplete.month)} use was ${p > 0 ? "+" : ""}${p}% vs the month before.`;
+            })()}
           </p>
         )}
       </Card>

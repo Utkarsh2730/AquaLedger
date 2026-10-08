@@ -4,8 +4,13 @@ import { generateClient } from "aws-amplify/data";
 import { fetchAuthSession } from "aws-amplify/auth";
 import type { Schema } from "@/amplify/data/resource";
 import outputs from "@/amplify_outputs.json";
+import { DEMO_SOCIETY_ID, demoClient, demoIngest } from "@/lib/demo/backend";
 
-export const client = generateClient<Schema>();
+/** `npm run demo`: everything runs in the browser against lib/demo/backend.ts, no AWS needed. */
+export const DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
+
+type DataClient = ReturnType<typeof generateClient<Schema>>;
+export const client: DataClient = DEMO ? (demoClient as unknown as DataClient) : generateClient<Schema>();
 
 /** a.json() results can arrive as a JSON string or an object depending on the path. */
 export function parseJson<T>(v: unknown): T {
@@ -28,6 +33,7 @@ export function unwrap<T>(res: { data?: unknown; errors?: { message: string }[] 
 const STATIC_GROUPS = new Set(["ADMINS", "RESIDENTS"]);
 
 export async function getRoles(forceRefresh = false) {
+  if (DEMO) return { groups: [DEMO_SOCIETY_ID, "ADMINS"], societyIds: [DEMO_SOCIETY_ID], isAdmin: true, isResident: false };
   const session = await fetchAuthSession({ forceRefresh });
   const raw = session.tokens?.accessToken.payload["cognito:groups"];
   const groups = Array.isArray(raw) ? (raw as string[]) : [];
@@ -39,11 +45,24 @@ export async function getRoles(forceRefresh = false) {
   };
 }
 
-export const meterIngestUrl: string | undefined = (outputs as { custom?: { meterIngestUrl?: string } }).custom?.meterIngestUrl;
+export const meterIngestUrl: string | undefined = DEMO ? "demo://meter-ingest" : (outputs as { custom?: { meterIngestUrl?: string } }).custom?.meterIngestUrl;
+
+/** Posts one smart-meter reading, exactly like scripts/meter_simulator.py does. */
+export async function postMeterReading(body: { societyId: string; flat: string; litres: number; periodMinutes: number }, token: string) {
+  if (DEMO) return demoIngest(body, token);
+  const res = await fetch(meterIngestUrl!, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-device-token": token },
+    body: JSON.stringify(body),
+  });
+  return { status: res.status, body: await res.json().catch(() => ({})) };
+}
 
 export const inr = (n: number | null | undefined) => `₹${Math.round(n ?? 0).toLocaleString("en-IN")}`;
 export const kl = (litres: number | null | undefined, dp = 1) =>
   `${(Math.round(((litres ?? 0) / 1000) * 10 ** dp) / 10 ** dp).toLocaleString("en-IN")} kL`;
+export const fmtDateTime = (iso: string) => new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+
 export const litresFmt = (n: number | null | undefined) => `${Math.round(n ?? 0).toLocaleString("en-IN")} L`;
 
 type Page<T> = { data: T[]; nextToken?: string | null; errors?: { message: string }[] | null };

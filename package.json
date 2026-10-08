@@ -10,7 +10,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc --noEmit -p amplify",
     "sandbox": "ampx sandbox",
-    "sandbox:delete": "ampx sandbox delete"
+    "sandbox:delete": "ampx sandbox delete",
+    "demo": "node scripts/ensure-outputs.mjs && NEXT_PUBLIC_DEMO_MODE=1 next dev",
+    "build:demo": "node scripts/ensure-outputs.mjs && NEXT_PUBLIC_DEMO_MODE=1 next build"
   },
   "dependencies": {
     "@aws-amplify/adapter-nextjs": "^1.8.0",

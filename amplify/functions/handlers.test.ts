@@ -38,7 +38,9 @@ function fakeSend(cmd: any): any {
       return { Item: tbl(i.TableName).get(Object.values(i.Key)[0] as string) };
     case "UpdateCommand": {
       const item = tbl(i.TableName).get(Object.values(i.Key)[0] as string);
-      if (item) item.residentEmail = i.ExpressionAttributeValues[":e"];
+      if (item) {
+        for (const [, attr, val] of (i.UpdateExpression as string).matchAll(/(\w+) = (:\w+)/g)) item[attr] = i.ExpressionAttributeValues[val];
+      }
       return {};
     }
     case "BatchWriteCommand":
@@ -137,6 +139,19 @@ describe("end-to-end through the Lambda handlers", () => {
     const resident: any = await queryApi({ ...appsync("myResidentPortal", {}), identity: { username: "r", claims: { email: "resident@example.com" } } } as any);
     expect(resident.flat.label).toBe("B-202");
     expect(resident.bills).toHaveLength(0); // drafts are hidden from residents
+
+    // a second committee member becomes admin of the same society
+    cognitoCalls.length = 0;
+    const co: any = await adminOps(appsync("inviteAdmin", { societyId: sid, email: "Treasurer@Example.com" }, admin));
+    expect(co.adminEmails).toEqual(["admin@example.com", "treasurer@example.com"]);
+    expect(cognitoCalls).toEqual(["AdminCreateUserCommand", "AdminAddUserToGroupCommand", "AdminAddUserToGroupCommand"]);
+    await expect(adminOps(appsync("inviteAdmin", { societyId: sid, email: "x@example.com" }, ["other"]))).rejects.toThrow(/Unauthorized/);
+
+    // leak impact: the planted leak is valued at tanker prices
+    const impact = (await queryApi(appsync("getDashboard", { societyId: sid }, admin)) as any).dashboard.impact;
+    expect(impact).toMatchObject({ leaksCaught: 1, open: 1, fixed: 0 });
+    expect(impact.litresPerMonth).toBeGreaterThan(10_000);
+    expect(impact.rupeesPerMonth).toBeGreaterThan(1_000);
 
     // CSV import
     const csv: any = await adminOps(appsync("importReadingsCsv", { societyId: sid, csv: "flat,date,litres\nA-101,2026-10-01,400\nZ-1,2026-10-01,3" }, admin));

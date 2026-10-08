@@ -9,6 +9,8 @@ export interface LeakFinding {
   type: AlertType;
   severity: Severity;
   message: string;
+  /** estimated water lost per day if nothing is fixed, for the impact numbers */
+  wasteLitresPerDay: number;
   /** numbers behind the finding, for the UI and for the AI summary */
   evidence: Record<string, number | string>;
 }
@@ -19,6 +21,8 @@ export interface LeakOptions {
   now?: Date;
   zThreshold?: number; // default 2.5 standard deviations
   baselineDays?: number; // default 30
+  /** recent days left out of the baseline so a leak that has run a few days can't inflate it (default 7) */
+  baselineGapDays?: number;
   minBaselineDays?: number; // default 14
   nightStartHour?: number; // default 2 (2 a.m.)
   nightEndHour?: number; // default 4 (4 a.m.), exclusive
@@ -29,14 +33,17 @@ export interface LeakOptions {
 }
 
 /**
- * Spike rule: a flat's usage on targetDay exceeds its trailing 30-day mean by more than
- * 2.5 standard deviations (and by at least 25% so very steady flats don't trip on noise).
+ * Spike rule: a flat's usage on targetDay exceeds its normal (a 30-day mean ending a week
+ * earlier) by more than 2.5 standard deviations, and by at least 25% so very steady flats don't
+ * trip on noise. The one-week gap keeps a leak that started a few days ago out of its own
+ * baseline; otherwise it would slowly look "normal" and stop being flagged.
  */
 export function detectSpikes(flats: FlatRec[], readings: ReadingRec[], opts: LeakOptions = {}): LeakFinding[] {
   const tz = opts.tzOffsetMin ?? DEFAULT_TZ_OFFSET_MIN;
   const target = opts.targetDay ?? addDays(localDay(opts.now ?? new Date(), tz), -1);
   const z = opts.zThreshold ?? 2.5;
   const baselineDays = opts.baselineDays ?? 30;
+  const gap = opts.baselineGapDays ?? 7;
   const minDays = opts.minBaselineDays ?? 14;
   const byFlat = dailyByFlat(readings, tz);
   const findings: LeakFinding[] = [];
@@ -47,7 +54,7 @@ export function detectSpikes(flats: FlatRec[], readings: ReadingRec[], opts: Lea
     const today = days.get(target);
     if (today === undefined) continue;
     const baseline: number[] = [];
-    for (let i = 1; i <= baselineDays; i++) {
+    for (let i = gap + 1; i <= gap + baselineDays; i++) {
       const v = days.get(addDays(target, -i));
       if (v !== undefined) baseline.push(v);
     }
@@ -62,7 +69,8 @@ export function detectSpikes(flats: FlatRec[], readings: ReadingRec[], opts: Lea
         flatLabel: flatLabel(flat),
         type: "spike",
         severity,
-        message: `${flatLabel(flat)} used ${round(today)} L on ${target}, ${round(today / m, 1)}x its 30-day average of ${round(m)} L (z = ${round(score, 1)}).`,
+        wasteLitresPerDay: round(today - m),
+        message: `${flatLabel(flat)} used ${round(today)} L on ${target}, ${round(today / m, 1)}x its normal ${round(m)} L a day (${round(score, 1)} standard deviations above).`,
         evidence: { day: target, litres: round(today), mean: round(m), sd: round(sd, 1), z: round(score, 2) },
       });
     }
@@ -119,6 +127,7 @@ export function detectNightFlow(flats: FlatRec[], readings: ReadingRec[], opts: 
         flatLabel: flatLabel(flat),
         type: "night_flow",
         severity,
+        wasteLitresPerDay: round(litresPerDay),
         message: `${flatLabel(flat)} shows steady flow of ~${round(avg, 1)} L/h between ${start} and ${end} a.m. on ${flowingNights.length} of the last ${lookback} nights: likely a running tap or cistern leak (~${round(litresPerDay)} L/day wasted).`,
         evidence: { nights: flowingNights.length, avgLitresPerHour: round(avg, 1), estimatedWastePerDay: round(litresPerDay) },
       });

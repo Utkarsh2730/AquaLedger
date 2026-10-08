@@ -50,6 +50,21 @@ export default function BillsPage() {
     setBusy(false);
   }
 
+  function exportCsv() {
+    if (!bills?.length) return;
+    const rows = [
+      ["Flat", "Month", "Litres", "Share %", "Usage charge", "Common charge", "Amount", "Status"],
+      ...[...bills]
+        .sort((a, b) => (a.flatLabel ?? "").localeCompare(b.flatLabel ?? "", "en", { numeric: true }))
+        .map((b) => [b.flatLabel, b.month, Math.round(b.litres ?? 0), (b.sharePct ?? 0).toFixed(3), b.usageCharge, b.commonCharge, b.amount, b.status]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const link = Object.assign(document.createElement("a"), { href: url, download: `aqualedger-bills-${month}.csv` });
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function markPaid(b: BillModel) {
     await client.models.Bill.update({ id: b.id, status: b.status === "paid" ? "issued" : "paid" });
     load();
@@ -87,10 +102,17 @@ export default function BillsPage() {
       <Card
         title={`Bills for ${monthLabel(month)}`}
         action={
-          bills?.some((b) => b.status === "draft") && (
-            <Button variant="secondary" onClick={issueAll} disabled={busy}>
-              Issue all drafts
-            </Button>
+          bills && bills.length > 0 && (
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={exportCsv}>
+                ⬇ Export CSV
+              </Button>
+              {bills.some((b) => b.status === "draft") && (
+                <Button variant="secondary" onClick={issueAll} disabled={busy}>
+                  Issue all drafts
+                </Button>
+              )}
+            </div>
           )
         }
       >

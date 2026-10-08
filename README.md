@@ -41,6 +41,17 @@ Smart meter / simulator ──HTTPS──► meter-ingest Lambda (Function URL) 
 
 All analytics live in `lib/core/` as plain TypeScript with no AWS dependencies, shared by the Lambdas and the UI and covered by unit tests.
 
+## Try it in 30 seconds (offline demo mode)
+
+No AWS account needed. The whole app runs in your browser with 6 months of demo data:
+
+```bash
+npm install
+npm run demo        # http://localhost:3000
+```
+
+Every page works: leak scans, bills, forecast, chat, the live meter, flats, settings. Changes are kept in the browser; **Settings → Reset demo data** starts over. It uses the same leak, billing and forecast logic as the real backend, so it's also your **stage backup if Wi-Fi or AWS fails**.
+
 ## Deploy
 
 Prerequisites: Node.js 20+, an AWS account, AWS CLI configured (`aws configure` or SSO) with a profile that can deploy Amplify. Pick one region and use it for everything (e.g. `ap-south-1` Mumbai).
@@ -88,6 +99,7 @@ Before presenting: **Settings → Reset demo data** for a known starting state.
 npm test             # unit tests (lib/core) + end-to-end handler tests against an in-memory DynamoDB
 npm run typecheck    # frontend + backend
 npm run build        # static export to out/
+npm run demo         # offline demo mode (no AWS)
 ```
 
 CSV format for imports (`flat, date, hour, litres`; leave `hour` empty for daily totals):

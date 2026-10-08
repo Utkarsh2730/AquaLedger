@@ -116,6 +116,7 @@ const schema = a
         message: a.string(),
         detectedAt: a.datetime().required(),
         resolved: a.boolean(),
+        wasteLitresPerDay: a.float(),
       })
       .secondaryIndexes((index) => [index("societyId").sortKeys(["detectedAt"]).name("bySocietyDetected").queryField("listAlertsBySociety")])
       .authorization((allow) => [allow.groupDefinedIn("societyId")]),
@@ -156,6 +157,13 @@ const schema = a
     inviteResident: a
       .mutation()
       .arguments({ societyId: a.id().required(), flatId: a.id().required(), email: a.email().required() })
+      .returns(a.json())
+      .authorization((allow) => [allow.authenticated()])
+      .handler(a.handler.function(adminOps)),
+
+    inviteAdmin: a
+      .mutation()
+      .arguments({ societyId: a.id().required(), email: a.email().required() })
       .returns(a.json())
       .authorization((allow) => [allow.authenticated()])
       .handler(a.handler.function(adminOps)),

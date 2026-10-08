@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { client, flatLabelOf, listAll, loadFlats, meterIngestUrl, type AlertModel, type FlatModel } from "@/lib/client";
+import { client, DEMO, flatLabelOf, listAll, loadFlats, meterIngestUrl, postMeterReading, type AlertModel, type FlatModel } from "@/lib/client";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, ErrorBox, Field, PageHeader, Select } from "@/components/ui";
 import { LiveChart } from "@/components/charts";
@@ -51,12 +51,8 @@ export default function LivePage() {
       const litres = tapRef.current ? 11 + Math.random() * 2 : Math.random() < 0.6 ? 0 : Math.random() * 1.2;
       setTicks((t) => [...t.slice(-39), { t: new Date().toLocaleTimeString("en-IN"), litres }]);
       try {
-        const res = await fetch(meterIngestUrl!, {
-          method: "POST",
-          headers: { "content-type": "application/json", "x-device-token": token },
-          body: JSON.stringify({ societyId, flat: flatLabelOf(flat), litres, periodMinutes: 1 }),
-        });
-        if (!res.ok) throw new Error(`Ingest failed: ${res.status} ${await res.text()}`);
+        const res = await postMeterReading({ societyId, flat: flatLabelOf(flat), litres, periodMinutes: 1 }, token);
+        if (res.status !== 200) throw new Error(`Ingest failed: ${res.status} ${JSON.stringify(res.body)}`);
         await pollAlerts();
       } catch (err) {
         setError(err);
@@ -110,14 +106,16 @@ export default function LivePage() {
                 🚨 <b>{new Date(a.detectedAt).toLocaleTimeString("en-IN")}</b> · {a.message}
               </div>
             ))}
-            <p className="text-xs text-slate-500">An email went to every confirmed admin subscription.</p>
+            <p className="text-xs text-slate-500">{DEMO ? "In the live app an email also goes to every confirmed admin." : "An email went to every confirmed admin subscription."}</p>
           </div>
         )}
       </Card>
+      {!DEMO && (
       <Card title="Run the Python simulator instead (for the stage demo)">
         <pre className="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">{pyCmd}</pre>
         <p className="mt-2 text-xs text-slate-500">Press Enter in the terminal to open/close the tap. Keep the device token secret; rotate it from Settings.</p>
       </Card>
+      )}
     </div>
   );
 }

@@ -29,6 +29,8 @@ export interface ForecastInput {
   tankerCount: Map<string, number>;
   /** the month being forecast (YYYY-MM) */
   targetMonth: string;
+  /** newest month with complete data; defaults to the month before targetMonth */
+  lastCompleteMonth?: string;
   defaultTankerLitres?: number;
   defaultTankerCost?: number;
 }
@@ -52,7 +54,10 @@ export interface Forecast {
  * month's seasonal factor. Tankers fill whatever municipal + borewell supply can't cover.
  */
 export function forecastMonth(input: ForecastInput): Forecast {
-  const basis = [1, 2, 3].map((i) => addMonths(input.targetMonth, -i)).filter((m) => input.consumption.has(m));
+  // The 3 most recent *complete* months. Forecasting December on Nov 8th must not average in a
+  // November that has only a week of readings.
+  const last = input.lastCompleteMonth ?? addMonths(input.targetMonth, -1);
+  const basis = [0, 1, 2].map((i) => addMonths(last, -i)).filter((m) => input.consumption.has(m));
   const deseasonalised = basis.map((m) => (input.consumption.get(m) ?? 0) / SEASONAL_FACTOR[monthNum(m)]);
   const factor = SEASONAL_FACTOR[monthNum(input.targetMonth)];
   const demand = mean(deseasonalised) * factor;

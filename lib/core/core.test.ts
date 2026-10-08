@@ -56,6 +56,15 @@ describe("leak detection", () => {
     expect(detectNightFlow([flat], three, { now })).toHaveLength(1);
   });
 
+  it("a leak that has run for days stays far above its own baseline", () => {
+    const spike = detectSpikes(seed.flats, seed.readings, { now })[0];
+    expect(spike.flatLabel).toBe("B-202");
+    expect(Number(spike.evidence.z)).toBeGreaterThan(6); // was ~2.5 when leak days polluted the baseline
+    // with no gap (the old behaviour) the same leak barely clears the threshold
+    const old = detectSpikes(seed.flats, seed.readings, { now, baselineGapDays: 0 })[0];
+    expect(Number(old.evidence.z)).toBeLessThan(Number(spike.evidence.z));
+  });
+
   it("spike rule ignores normal days", () => {
     const quiet = seed.readings.filter((r) => r.flatId !== seed.leakFlatId);
     expect(detectSpikes(seed.flats, quiet, { now })).toHaveLength(0);
@@ -125,6 +134,20 @@ describe("dashboard + insights", () => {
     const may = dash.monthly.find((m) => m.month === "2026-05")!;
     const aug = dash.monthly.find((m) => m.month === "2026-08")!;
     expect(may.tankerCost).toBeGreaterThan(aug.tankerCost);
+  });
+
+  it("forecasts from complete months only and never charts today's partial day", () => {
+    // `now` is Oct 8th: October has only 7 complete days and must not drag the forecast down
+    expect(dash.forecast!.basisMonths).toEqual(["2026-09", "2026-08", "2026-07"]);
+    const sep = dash.monthly.find((m) => m.month === "2026-09")!.consumedLitres;
+    expect(dash.forecast!.demandLitres).toBeGreaterThan(sep * 0.95); // Nov is ~Sept-level demand, not a third of it
+    expect(dash.dailyTrend.at(-1)!.day).toBe("2026-10-07");
+    expect(Math.min(...dash.dailyTrend.slice(-30).map((d) => d.litres))).toBeGreaterThan(5_000);
+    // average over the 7 complete October days, not divided by 8
+    const oct = dash.dailyTrend.filter((d) => d.day.startsWith("2026-10"));
+    expect(oct).toHaveLength(7);
+    const expected = oct.reduce((a, d) => a + d.litres, 0) / 40 / 7;
+    expect(dash.kpis.avgLitresPerFlatPerDay).toBeCloseTo(expected, -1);
   });
 
   it("builds a flat drill-down", () => {

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
-import { getRoles } from "@/lib/client";
+import { DEMO, getRoles } from "@/lib/client";
 import { Spinner } from "@/components/ui";
 
 function Redirect() {
@@ -20,7 +20,14 @@ function Redirect() {
   return <Spinner label="Signing you in…" />;
 }
 
+function DemoRedirect() {
+  const router = useRouter();
+  useEffect(() => router.replace("/dashboard"), [router]);
+  return <Spinner label="Opening the demo…" />;
+}
+
 export default function LoginPage() {
+  if (DEMO) return <DemoRedirect />;
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
       <a href="/" className="text-2xl font-semibold text-brand-700">

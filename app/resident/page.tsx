@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
+import { AuthGate, DemoBanner, useSession } from "@/components/Auth";
 import { client, inr, unwrap } from "@/lib/client";
 import { ErrorBox, Spinner, Card } from "@/components/ui";
 import FlatUsage from "@/components/FlatUsage";
@@ -14,7 +14,7 @@ type Portal =
   | (Omit<FlatDetail, "flat"> & { email: string; society: { name?: string; city?: string }; flat: { label: string }; bills: BillRec[] });
 
 function Portal() {
-  const { signOut } = useAuthenticator();
+  const { signOut } = useSession();
   const [data, setData] = useState<Portal | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [bill, setBill] = useState<BillRec | null>(null);
@@ -79,8 +79,9 @@ function Portal() {
 
 export default function ResidentPage() {
   return (
-    <Authenticator className="pt-16" hideSignUp>
+    <AuthGate hideSignUp>
+      <DemoBanner />
       <Portal />
-    </Authenticator>
+    </AuthGate>
   );
 }

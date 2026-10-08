@@ -71,6 +71,8 @@ export interface AlertRec {
   message: string;
   detectedAt: string;
   resolved: boolean;
+  /** estimated litres lost per day while the leak runs (absent on older alerts) */
+  wasteLitresPerDay?: number | null;
 }
 
 export const flatLabel = (f: Pick<FlatRec, "block" | "number">) => `${f.block}-${f.number}`;

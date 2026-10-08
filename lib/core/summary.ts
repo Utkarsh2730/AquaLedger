@@ -35,6 +35,39 @@ export interface DashboardSummary {
   topFlats: { flatId: string; flatLabel: string; litres: number; vsAverage: number }[];
   dailyTrend: { day: string; litres: number }[];
   forecast: Forecast | null;
+  impact: LeakImpact;
+}
+
+/** What leak detection is worth: water and money a flat's leak would cost per month. */
+export interface LeakImpact {
+  /** flats with a usage-spike or night-flow alert in the last 90 days */
+  leaksCaught: number;
+  fixed: number;
+  open: number;
+  litresPerMonth: number;
+  rupeesPerMonth: number;
+  /** price the saving is valued at: tanker ₹/kL (the marginal water a society buys) */
+  rupeesPerKl: number;
+}
+
+export function buildImpact(alerts: AlertRec[], rupeesPerKl: number, now = new Date()): LeakImpact {
+  const since = new Date(now.getTime() - 90 * 86_400_000).toISOString();
+  const byFlat = new Map<string, { waste: number; open: boolean }>();
+  for (const a of alerts) {
+    if (a.type === "live_spike" || a.detectedAt < since) continue;
+    const cur = byFlat.get(a.flatId) ?? { waste: 0, open: false };
+    byFlat.set(a.flatId, { waste: Math.max(cur.waste, a.wasteLitresPerDay ?? 0), open: cur.open || !a.resolved });
+  }
+  const litresPerMonth = [...byFlat.values()].reduce((s, f) => s + f.waste * 30, 0);
+  const open = [...byFlat.values()].filter((f) => f.open).length;
+  return {
+    leaksCaught: byFlat.size,
+    fixed: byFlat.size - open,
+    open,
+    litresPerMonth: round(litresPerMonth),
+    rupeesPerMonth: round((litresPerMonth / 1000) * rupeesPerKl),
+    rupeesPerKl,
+  };
 }
 
 export interface SocietyData {
@@ -73,12 +106,14 @@ export function sourceMonths(data: SocietyData, tz = DEFAULT_TZ_OFFSET_MIN): Sou
 
 export const monthCost = (m: SourceMonth) => m.municipalCost + m.borewellCost + m.tankerCost;
 
-export function buildForecast(months: SourceMonth[], targetMonth: string): Forecast | null {
-  const complete = months.filter((m) => m.month < targetMonth && m.consumedLitres > 0);
+/** Forecast targetMonth from the months before `currentMonth` (the current month is incomplete). */
+export function buildForecast(months: SourceMonth[], targetMonth: string, currentMonth = addMonths(targetMonth, -1)): Forecast | null {
+  const complete = months.filter((m) => m.month < currentMonth && m.month < targetMonth && m.consumedLitres > 0);
   if (!complete.length) return null;
   const map = (f: (m: SourceMonth) => number) => new Map(complete.map((m) => [m.month, f(m)]));
   return forecastMonth({
     targetMonth,
+    lastCompleteMonth: complete[complete.length - 1].month,
     consumption: map((m) => m.consumedLitres),
     municipal: map((m) => m.municipalLitres),
     borewell: map((m) => m.borewellLitres),
@@ -123,9 +158,17 @@ export function buildDashboard(data: SocietyData, now = new Date(), tz = DEFAULT
 
   const totals = dailyTotals(data.readings, tz);
   const dailyTrend: { day: string; litres: number }[] = [];
-  for (let d = addDays(today, -45); d <= today; d = addDays(d, 1)) dailyTrend.push({ day: d, litres: round(totals.get(d) ?? 0) });
+  // Stop at yesterday: today is only partly metered and would look like a sudden drop.
+  for (let d = addDays(today, -45); d < today; d = addDays(d, 1)) dailyTrend.push({ day: d, litres: round(totals.get(d) ?? 0) });
 
-  const daysElapsed = Number(today.slice(8, 10));
+  let completeDays = 0;
+  let completeLitres = 0;
+  for (let d = `${currentMonth}-01`; d < today; d = addDays(d, 1)) {
+    if (!totals.has(d)) continue;
+    completeDays += 1;
+    completeLitres += totals.get(d)!;
+  }
+  const tankerPerKl = perKl(tot.tc, tot.tl) || perKl(tot.mc + tot.bc + tot.tc, tot.ml + tot.bl + tot.tl);
   const curLitres = cur?.consumedLitres ?? 0;
 
   return {
@@ -140,7 +183,7 @@ export function buildDashboard(data: SocietyData, now = new Date(), tz = DEFAULT
       costPerKl: perKl(tot.mc + tot.bc + tot.tc, tot.ml + tot.bl + tot.tl),
       openAlerts: data.alerts.filter((a) => !a.resolved).length,
       flats: data.flats.length,
-      avgLitresPerFlatPerDay: data.flats.length && daysElapsed ? round(curLitres / data.flats.length / daysElapsed) : 0,
+      avgLitresPerFlatPerDay: data.flats.length && completeDays ? round(completeLitres / data.flats.length / completeDays) : 0,
     },
     monthly: months,
     costPerKlBySource: [
@@ -150,7 +193,8 @@ export function buildDashboard(data: SocietyData, now = new Date(), tz = DEFAULT
     ],
     topFlats,
     dailyTrend,
-    forecast: buildForecast(months, addMonths(currentMonth, 1)),
+    forecast: buildForecast(months, addMonths(currentMonth, 1), currentMonth),
+    impact: buildImpact(data.alerts, tankerPerKl, now),
   };
 }
 

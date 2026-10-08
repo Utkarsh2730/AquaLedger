@@ -5,7 +5,7 @@ import {
   CreateGroupCommand,
   UsernameExistsException,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { BatchWriteCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { BatchWriteCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { generateFlats, generateSeed } from "../../../lib/core/seed";
 import { parseReadingsCsv } from "../../../lib/core/csv";
 import type { FlatRec } from "../../../lib/core/types";
@@ -27,6 +27,9 @@ export const handler = async (event: ResolverEvent<Args>) => {
     case "inviteResident":
       assertSocietyAdmin(event.identity, a.societyId);
       return inviteResident(a.societyId, a.flatId, a.email);
+    case "inviteAdmin":
+      assertSocietyAdmin(event.identity, a.societyId);
+      return inviteAdmin(a.societyId, a.email);
     case "importReadingsCsv":
       assertSocietyAdmin(event.identity, a.societyId);
       return importCsv(a.societyId, a.csv);
@@ -123,11 +126,8 @@ async function clearSociety(typename: "Alert" | "Bill" | "Insight", index: strin
   }
 }
 
-async function inviteResident(societyId: string, flatId: string, rawEmail: string) {
-  const email = rawEmail.trim().toLowerCase();
-  const flat = (await ddb.send(new GetCommand({ TableName: T.Flat, Key: { id: flatId } }))).Item as FlatRec | undefined;
-  if (!flat || flat.societyId !== societyId) throw new Error("Flat not found in this society");
-  let invited = true;
+/** Creates (or reuses) the Cognito user and emails them a temporary password. */
+async function ensureUser(email: string): Promise<boolean> {
   try {
     // Cognito emails a temporary password (default Cognito sender: free, ~50 emails/day).
     await cognito.send(
@@ -141,10 +141,39 @@ async function inviteResident(societyId: string, flatId: string, rawEmail: strin
         DesiredDeliveryMediums: ["EMAIL"],
       })
     );
+    return true;
   } catch (err) {
     if (!(err instanceof UsernameExistsException)) throw err;
-    invited = false; // existing account: just link it to the flat
+    return false; // existing account: just grant access
   }
+}
+
+/** Another committee member: full admin of this society, and gets its alert emails. */
+async function inviteAdmin(societyId: string, rawEmail: string) {
+  const email = rawEmail.trim().toLowerCase();
+  const society = await getSociety(societyId);
+  if (!society) throw new Error("Society not found");
+  const invited = await ensureUser(email);
+  await addToGroup(email, societyId);
+  await addToGroup(email, "ADMINS");
+  const adminEmails = [...new Set([...(society.adminEmails ?? []), email])];
+  await ddb.send(
+    new UpdateCommand({
+      TableName: T.Society,
+      Key: { societyId },
+      UpdateExpression: "SET adminEmails = :a, updatedAt = :u",
+      ExpressionAttributeValues: { ":a": adminEmails, ":u": new Date().toISOString() },
+    })
+  );
+  await subscribeAdminEmail(societyId, email).catch((err) => console.error("SNS subscribe failed", err));
+  return { ok: true, invited, email, adminEmails };
+}
+
+async function inviteResident(societyId: string, flatId: string, rawEmail: string) {
+  const email = rawEmail.trim().toLowerCase();
+  const flat = (await ddb.send(new GetCommand({ TableName: T.Flat, Key: { id: flatId } }))).Item as FlatRec | undefined;
+  if (!flat || flat.societyId !== societyId) throw new Error("Flat not found in this society");
+  const invited = await ensureUser(email);
   await addToGroup(email, "RESIDENTS");
   await updateFlatResident(flatId, email);
   return { ok: true, invited, email, flat: `${flat.block}-${flat.number}` };

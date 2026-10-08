@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { client, listAll, unwrap, type AlertModel } from "@/lib/client";
+import { client, fmtDateTime, listAll, unwrap, type AlertModel } from "@/lib/client";
 import { useSociety } from "@/components/SocietyContext";
 import { Badge, Button, Card, Empty, ErrorBox, PageHeader, Spinner } from "@/components/ui";
 
@@ -81,7 +81,7 @@ export default function AlertsPage() {
                     {a.resolved && <Badge tone="good">resolved</Badge>}
                   </div>
                   <p className="text-sm text-slate-700">{a.message}</p>
-                  <p className="text-xs text-slate-400">{new Date(a.detectedAt).toLocaleString("en-IN")}</p>
+                  <p className="text-xs text-slate-400">{fmtDateTime(a.detectedAt)}</p>
                 </div>
                 <Button variant={a.resolved ? "ghost" : "secondary"} onClick={() => resolve(a)}>
                   {a.resolved ? "Reopen" : "✓ Mark fixed"}
