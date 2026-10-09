@@ -5,6 +5,7 @@
   "description": "AquaLedger - water management SaaS for apartment societies (AWS Amplify Gen 2, free-tier friendly)",
   "scripts": {
     "dev": "next dev",
+    "doctor": "node scripts/doctor.mjs",
     "build": "NEXT_DIST_DIR=out next build",
     "start": "next start",
     "test": "vitest run",
