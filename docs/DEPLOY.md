@@ -9,7 +9,7 @@ Two ways to run the backend on your AWS account. Use the **sandbox** while build
 One-time setup in the AWS console (region **Asia Pacific (Mumbai) ap-south-1**):
 
 1. Open **AWS Amplify → Create new app → GitHub**, authorize, and pick
-   `Utkarsh2730/Environmental_Hackathon` and the branch to deploy.
+   `Utkarsh2730/AquaLedger` and the `main` branch.
 2. **App settings / build settings:** Amplify reads `amplify.yml` from the repo. Leave it as is.
 3. **Service role:** choose *Create and use a new service role*. If the console doesn't offer it,
    create one afterwards (step 6) before the first build finishes.

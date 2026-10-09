@@ -4,7 +4,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { createConnection } from "node:net";
 
-const BRANCH = "claude/roadmap-aws-free-tier-g4p2lc";
+const BRANCH = "main";
 const ok = (m) => console.log(`  ✅ ${m}`);
 const bad = (m, fix) => {
   problems++;
@@ -30,7 +30,7 @@ else bad(`Node.js ${process.versions.node} is too old`, "Install Node.js 22 LTS 
 // 2. Code version
 const branch = sh("git rev-parse --abbrev-ref HEAD");
 const head = sh("git log --oneline -1");
-if (!branch) bad("This folder isn't the AquaLedger git repository", "cd into the Environmental_Hackathon folder first.");
+if (!branch) bad("This folder isn't the AquaLedger git repository", "cd into your AquaLedger project folder first.");
 else {
   if (branch !== BRANCH) bad(`On branch "${branch}"`, `git checkout ${BRANCH}`);
   sh(`git fetch -q origin ${BRANCH}`);
