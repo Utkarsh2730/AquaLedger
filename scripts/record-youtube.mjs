@@ -127,11 +127,6 @@ const smoothScroll = (y) => page.evaluate((yy) => window.scrollTo({ top: yy, beh
 // chapter markers for the YouTube description (frame index → time, so they match the video exactly)
 const chapters = [];
 const mark = (title) => chapters.push({ title, frame: frames.length });
-// a chapter card also clears the last caption, so it doesn't reappear on the next page
-const showCard = async (html) => {
-  await page.setContent(html);
-  await page.evaluate(() => sessionStorage.removeItem("yt-cap")).catch(() => {});
-};
 
 const shell = (body, extraCss = "") => `<!doctype html><html><head><meta charset="utf-8"><style>
   *{box-sizing:border-box} body{margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
@@ -199,7 +194,7 @@ await cap(null, null);
 
 // ── 1 dashboard ──────────────────────────────────────────────────────────────────────────────
 mark("1. Dashboard: where the water and money go");
-await showCard(chapterCard(1, "The dashboard", "Where the water comes from, and where the money goes."));
+await page.setContent(chapterCard(1, "The dashboard", "Where the water comes from, and where the money goes."));
 await sleep(3000);
 await page.goto(B + "/dashboard/", { waitUntil: "networkidle" });
 await page.getByText("Top 10 flats").first().waitFor();
@@ -217,7 +212,7 @@ await sleep(800);
 
 // ── 2 leaks ──────────────────────────────────────────────────────────────────────────────────
 mark("2. Automatic leak detection");
-await showCard(chapterCard(2, "Leak detection", "Every flat, every night: usage spikes and water running at 2–4 a.m."));
+await page.setContent(chapterCard(2, "Leak detection", "Every flat, every night: usage spikes and water running at 2–4 a.m."));
 await sleep(3000);
 await page.goto(B + "/dashboard/", { waitUntil: "networkidle" });
 await page.getByRole("button", { name: /Run analysis now/ }).waitFor();
@@ -236,7 +231,7 @@ await sleep(4800);
 
 // ── 3 bills ──────────────────────────────────────────────────────────────────────────────────
 mark("3. Fair, usage-based bills");
-await showCard(chapterCard(3, "Fair bills", "Each flat pays for the water it actually used. No more equal-split disputes."));
+await page.setContent(chapterCard(3, "Fair bills", "Each flat pays for the water it actually used. No more equal-split disputes."));
 await sleep(3000);
 await page.goto(B + "/bills/", { waitUntil: "networkidle" });
 await page.getByText("Old equal split").first().waitFor();
@@ -254,7 +249,7 @@ await sleep(5000);
 
 // ── 4 forecast + answers ─────────────────────────────────────────────────────────────────────────
 mark("4. Tanker forecast and plain-English answers");
-await showCard(chapterCard(4, "Forecast & answers", "Book tankers before summer hits, and ask your water data anything."));
+await page.setContent(chapterCard(4, "Forecast & answers", "Book tankers before summer hits, and ask your water data anything."));
 await sleep(3000);
 await page.goto(B + "/insights/", { waitUntil: "networkidle" });
 await page.getByText("Tankers to book").first().waitFor();
@@ -268,7 +263,7 @@ await sleep(6000);
 
 // ── 5 live meter ─────────────────────────────────────────────────────────────────────────────
 mark("5. Live smart-meter leak alert");
-await showCard(chapterCard(5, "Live smart meters", "A tap left running raises an alert within seconds."));
+await page.setContent(chapterCard(5, "Live smart meters", "A tap left running raises an alert within seconds."));
 await sleep(3000);
 await page.goto(B + "/live/", { waitUntil: "networkidle" });
 await page.getByRole("button", { name: /Start meter/ }).waitFor();
@@ -286,7 +281,7 @@ await click(page.getByRole("button", { name: /Stop meter/ }));
 
 // ── 6 residents ──────────────────────────────────────────────────────────────────────────────
 mark("6. Resident access by email and WhatsApp");
-await showCard(chapterCard(6, "Residents", "No sign-ups or passwords: the committee gives each flat an access code."));
+await page.setContent(chapterCard(6, "Residents", "No sign-ups or passwords: the committee gives each flat an access code."));
 await sleep(3000);
 await page.goto(B + "/flats/", { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Give access to all flats" }).waitFor();
