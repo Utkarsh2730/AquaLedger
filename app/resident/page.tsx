@@ -83,7 +83,7 @@ function CodeForm({ initial, busy, error, onSubmit }: { initial: string; busy: b
         One code per flat, shared by everyone living there. Lost it? Ask your society committee: they can issue a new one, which also switches off the old one.
       </p>
       {DEMO && (
-        <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
+        <p id="demo-hint" className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
           Offline demo: flat B-202 has the code <b className="font-mono">{DEMO_RESIDENT_CODE}</b>. Committee → Flats → Give access makes codes for the others.
         </p>
       )}

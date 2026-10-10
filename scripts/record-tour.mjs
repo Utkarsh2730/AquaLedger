@@ -30,7 +30,7 @@ const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, d
 // caption bar + visible cursor that survive client-side navigation and reloads
 await ctx.addInitScript(() => {
   const css = `
-    #demo-banner{display:none!important}
+    #demo-banner,#demo-hint{display:none!important}
     #tour-cap{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:99999;max-width:1160px;width:max-content;
       display:flex;align-items:center;gap:14px;padding:16px 26px;border-radius:18px;background:rgba(2,6,23,.88);
       color:#fff;font:700 31px/1.25 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.25);

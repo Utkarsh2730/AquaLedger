@@ -35,7 +35,7 @@ const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 }, d
 
 await ctx.addInitScript(() => {
   const css = `
-    #demo-banner{display:none!important}
+    #demo-banner,#demo-hint{display:none!important}
     #yt-cap{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:99999;max-width:1400px;width:max-content;
       display:flex;align-items:center;gap:16px;padding:16px 28px;border-radius:18px;background:rgba(2,6,23,.9);
       color:#fff;font:700 30px/1.3 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 12px 34px rgba(0,0,0,.28)}
