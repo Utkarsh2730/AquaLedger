@@ -3,7 +3,7 @@ import BrowserFrame from "@/components/landing/BrowserFrame";
 import SocietyScene from "@/components/landing/SocietyScene";
 import SavingsCalculator from "@/components/landing/SavingsCalculator";
 import TourVideo from "@/components/landing/TourVideo";
-import { AlertIcon, CheckIcon, DropIcon, GaugeIcon, HomeIcon, ReceiptIcon, SparkIcon, TruckIcon } from "@/components/landing/Icons";
+import { AlertIcon, BuildingIcon, CheckIcon, DropIcon, GaugeIcon, HomeIcon, ReceiptIcon, SparkIcon, TruckIcon } from "@/components/landing/Icons";
 
 const STEPS = [
   { icon: GaugeIcon, title: "Meter every litre", body: "Type readings in, upload the CSV your meter reader sends, or connect smart meters for live data." },
@@ -80,19 +80,29 @@ export default function Landing() {
             <a href="#how" className="hidden px-2 text-slate-600 hover:text-slate-900 lg:block">How it works</a>
             <a href="#features" className="hidden px-2 text-slate-600 hover:text-slate-900 lg:block">Features</a>
             <a href="#pricing" className="hidden px-2 text-slate-600 hover:text-slate-900 lg:block">Pricing</a>
-            {/* two doors, two colours: green for residents (matches the resident portal), cyan for the committee */}
-            <Link
-              href="/resident"
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-600 bg-emerald-50 px-2.5 py-2 font-medium text-emerald-800 hover:bg-emerald-100 sm:px-4"
-            >
-              <HomeIcon className="h-4 w-4" />
-              <span className="sm:hidden">Resident</span>
-              <span className="hidden sm:inline">Resident login</span>
-            </Link>
-            <Link href="/login" className="whitespace-nowrap rounded-lg bg-brand-600 px-2.5 py-2 font-medium text-white shadow-sm hover:bg-brand-700 sm:px-4">
-              <span className="sm:hidden">Committee</span>
-              <span className="hidden sm:inline">Committee login</span>
-            </Link>
+            {/* two doors, one control: green for residents (matches the resident portal), cyan for the committee */}
+            <div role="group" aria-label="Log in" className="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+              <Link
+                href="/resident"
+                className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 font-medium text-emerald-700 transition-colors hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 sm:px-4"
+              >
+                <HomeIcon className="hidden h-4 w-4 min-[400px]:block" />
+                <span>
+                  Resident
+                  <span className="hidden sm:inline"> login</span>
+                </span>
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand-600 px-2.5 font-medium text-white shadow-sm shadow-cyan-700/20 transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 sm:px-4"
+              >
+                <BuildingIcon className="hidden h-4 w-4 min-[400px]:block" />
+                <span>
+                  Committee
+                  <span className="hidden sm:inline"> login</span>
+                </span>
+              </Link>
+            </div>
           </nav>
         </div>
       </header>
