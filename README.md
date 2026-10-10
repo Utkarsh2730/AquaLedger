@@ -2,7 +2,7 @@
 
 AquaLedger is a water management SaaS for apartment societies: it tracks every litre from municipal supply, borewells and tankers, catches leaks automatically, bills each flat by actual usage, and forecasts shortages before the sump runs dry.
 
-Built on a fully serverless AWS Amplify Gen 2 backend that fits the **AWS free tier**. See [docs/AWS_FREE_TIER.md](docs/AWS_FREE_TIER.md) for the cost of each service and where this build differs from the original roadmap.
+Built on a fully serverless AWS Amplify Gen 2 backend that fits the **AWS free tier**.
 
 ## What's in the box
 
