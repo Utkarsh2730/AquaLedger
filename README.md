@@ -19,7 +19,7 @@ Built on a fully serverless AWS Amplify Gen 2 backend that fits the **AWS free t
 | Intelligence | Shortage forecast: 3-month moving average × seasonal factor → tankers & cost | `/insights`, `lib/core/forecast.ts` |
 | Intelligence | Alert & bill emails (SNS) | `amplify/functions/shared/notify.ts` |
 | Intelligence | Nightly scan, monthly billing (EventBridge schedule) | `amplify/functions/analysis` |
-| Intelligence | Monthly summary + "Ask your water data" chat (rule-based free; Claude on Bedrock optional) | `/insights` |
+| Intelligence | Monthly summary + "Ask your water data" chat (rule-based, free) | `/insights` |
 | Extras | Live leak demo: virtual meter in the browser or `scripts/meter_simulator.py` | `/live`, `meter-ingest` Lambda |
 | Extras | Resident portal: open with the flat's access code (no account), which the committee sends to every resident from its own list by email and WhatsApp; own usage vs building average, own bills | `/resident` |
 | Extras | Landing page with pricing tiers | `/` |
@@ -33,7 +33,7 @@ Next.js (static export, Amplify Hosting)
 AppSync GraphQL ──► DynamoDB (Society, Flat, Reading, TankerDelivery, SourceSupply, Bill, Alert, Insight)
    │ custom queries/mutations
    ├─► admin-ops   Lambda: setupSociety, seedDemoData, issue/revoke/sendResidentAccess (SES email, WhatsApp), importReadingsCsv
-   ├─► query-api   Lambda: getDashboard, getFlatDetail, askWaterData, residentPortal(code) ──► (Bedrock, optional)
+   ├─► query-api   Lambda: getDashboard, getFlatDetail, askWaterData, residentPortal(code)
    └─► analysis    Lambda: runAnalysis (leaks / billing / insights) ◄── EventBridge nightly schedule
                                                     └──► SNS topic ──► admin emails
 Smart meter / simulator ──HTTPS──► meter-ingest Lambda (Function URL) ──► DynamoDB + live alert + SNS
@@ -64,7 +64,7 @@ npx ampx sandbox            # deploys the backend to your account and writes amp
 npm run dev                 # http://localhost:3000
 ```
 
-**Option B — Amplify Hosting (live URL for judges).** Full steps, settings and the AI setup are in [docs/DEPLOY.md](docs/DEPLOY.md).
+**Option B — Amplify Hosting (live URL for judges).** Full steps and settings are in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 1. Push this repo to GitHub.
 2. AWS console → Amplify → *Create new app* → GitHub → pick the repo and branch.
@@ -88,7 +88,7 @@ Then:
 3. Live leak: `/live` → start meter → open tap → alert + email.
 4. Fair billing: `/bills` → generate → open a bill; note "vs equal split".
 5. Forecast: `/insights` → "Next month you need ~N tankers; book early."
-6. AI: ask "Why did our bill go up this month?"
+6. Ask your water data: "Why did our bill go up this month?"
 7. Close: ₹10-15 per flat per month; pays for itself with one leak.
 
 Before presenting: **Settings → Reset demo data** for a known starting state.

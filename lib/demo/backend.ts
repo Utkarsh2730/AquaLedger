@@ -295,8 +295,6 @@ export const demoClient = {
           { id: "schedule", name: "Nightly leak scan", status: "warn", detail: "Demo mode has no scheduler.", fix: "Use “Run analysis now” on the dashboard." },
           { id: "emails", name: "Alert emails", status: "warn", detail: "Demo mode doesn't send email." },
           { id: "meter", name: "Smart-meter endpoint", status: "pass", detail: "Simulated in the browser (Live meters page)." },
-          { id: "ai-chat", name: "AI answers (chat)", status: "warn", detail: "Demo mode uses the free rule-based answers." },
-          { id: "ai-insights", name: "AI monthly summaries", status: "warn", detail: "Demo mode uses the free rule-based summaries." },
           { id: "resident-email", name: "Resident access emails", status: "warn", detail: "Demo mode shows the email residents would get instead of sending it." },
           { id: "resident-whatsapp", name: "Resident WhatsApp", status: "pass", detail: "One-tap mode: the committee sends each flat's login from its own WhatsApp." },
         ],

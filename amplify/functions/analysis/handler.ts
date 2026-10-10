@@ -2,12 +2,11 @@ import { randomUUID } from "node:crypto";
 import type { ScheduledEvent } from "aws-lambda";
 import { planBilling, planLeakAlerts } from "../../../lib/core/jobs";
 import { buildDashboard, type SocietyData } from "../../../lib/core/summary";
-import { buildFacts, ruleBasedSummary } from "../../../lib/core/insights";
+import { ruleBasedSummary } from "../../../lib/core/insights";
 import { addMonths, localDay, localMonth, monthLabel } from "../../../lib/core/time";
 import { batchPut, getSociety, listBillsForMonth, listSocieties, loadSocietyData, markNightlyScan, putItem, type SocietyRec } from "../shared/db";
 import { assertSocietyAdmin, type ResolverEvent } from "../shared/identity";
 import { notify } from "../shared/notify";
-import { askModel } from "../shared/ai";
 
 type Task = "leaks" | "billing" | "insights" | "all";
 
@@ -75,14 +74,8 @@ async function runBilling(society: SocietyRec, data: SocietyData, month: string,
 async function runInsights(society: SocietyRec, data: SocietyData, month: string, now: Date, tz: number) {
   const dash = buildDashboard(data, now, tz);
   const openAlerts = data.alerts.filter((a) => !a.resolved).map((a) => a.message);
-  const modelId = process.env.INSIGHT_MODEL_ID || undefined;
-  const ai = await askModel(
-    modelId,
-    buildFacts(dash, { societyName: society.name, openAlerts }),
-    `Write the monthly water summary for ${monthLabel(month)} for the society committee in 4-5 plain-English sentences: what changed vs the previous month and why, the biggest cost driver, any leak alerts, and what to do next month (use forecastNextMonth).`
-  );
-  const summaryText = ai.text ?? ruleBasedSummary(dash, openAlerts);
-  const generatedBy = ai.text ? modelId : "rules";
+  const summaryText = ruleBasedSummary(dash, openAlerts);
+  const generatedBy = "rules";
   await putItem("Insight", {
     id: `${society.societyId}#${month}`,
     societyId: society.societyId,
@@ -91,6 +84,6 @@ async function runInsights(society: SocietyRec, data: SocietyData, month: string
     forecast: dash.forecast ?? undefined,
     generatedBy,
   });
-  return { month, generatedBy, summaryText, ...(ai.error ? { aiError: ai.error } : {}) };
+  return { month, generatedBy, summaryText };
 }
 

@@ -151,7 +151,7 @@ await cap("4", "Every resident gets a clear bill showing how it was calculated."
 await sleep(4200);
 
 // 5 · forecast + AI
-await click(page.getByRole("link", { name: "Forecast & AI" }));
+await click(page.getByRole("link", { name: "Forecast & insights" }));
 await page.getByText("Tankers to book").first().waitFor();
 await cap("5", "The forecast says how many tankers to book next month, and the budget.");
 await sleep(2200);

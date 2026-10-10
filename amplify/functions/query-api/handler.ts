@@ -1,10 +1,9 @@
 import { buildDashboard, buildFlatDetail } from "../../../lib/core/summary";
-import { buildFacts, ruleBasedAnswer } from "../../../lib/core/insights";
+import { ruleBasedAnswer } from "../../../lib/core/insights";
 import type { BillRec } from "../../../lib/core/types";
 import { hashAccessCode, isWellFormedAccessCode } from "../../../lib/core/access";
 import { findFlatByAccessHash, getSociety, listFlats, listReadings, loadSocietyData, queryAll, T } from "../shared/db";
 import { assertSocietyAdmin, type ResolverEvent } from "../shared/identity";
-import { aiEnabled, askModel, pingModel } from "../shared/ai";
 import { mailStatus } from "../shared/mail";
 import { whatsappStatus } from "../shared/whatsapp";
 import { subscriptionStatus } from "../shared/notify";
@@ -71,11 +70,7 @@ async function askWaterData(societyId: string, question: string) {
   const [society, data] = await Promise.all([getSociety(societyId), loadSocietyData(societyId)]);
   const dash = buildDashboard(data, new Date(), society?.tzOffsetMinutes ?? 330);
   const openAlerts = data.alerts.filter((x) => !x.resolved).map((x) => x.message);
-  const modelId = process.env.CHAT_MODEL_ID || undefined;
-  const ai = await askModel(modelId, buildFacts(dash, { societyName: society?.name, openAlerts }), question);
-  if (ai.text) return { answer: ai.text, source: "bedrock", model: modelId };
-  // fall back to the free rule-based answer; say why, so a misconfigured model is visible
-  return { answer: ruleBasedAnswer(question, dash, openAlerts), source: "rules", ...(ai.error ? { aiError: ai.error } : {}) };
+  return { answer: ruleBasedAnswer(question, dash, openAlerts), source: "rules" };
 }
 
 /**
@@ -228,27 +223,6 @@ async function systemCheck(societyId: string) {
         : { status: "fail", detail: `Expected 401 for a bad token, got HTTP ${res.status}.`, fix: "Check the meter-ingest function URL and its permissions in the Lambda console." };
     }),
 
-    ...[
-      ["ai-chat", "AI answers (chat)", process.env.CHAT_MODEL_ID],
-      ["ai-insights", "AI monthly summaries", process.env.INSIGHT_MODEL_ID],
-    ].map(([id, name, model]) =>
-      check(id!, name!, async () => {
-        if (!aiEnabled(model)) return { status: "warn", detail: "Switched off: using free rule-based answers.", fix: "Set the model in AQUALEDGER_CHAT_MODEL / AQUALEDGER_INSIGHT_MODEL and redeploy." };
-        const started = Date.now();
-        const res = await pingModel(model);
-        const region = process.env.BEDROCK_REGION || process.env.AWS_REGION;
-        if (res.text) return { status: "pass", detail: `${model} in ${region} answered in ${((Date.now() - started) / 1000).toFixed(1)} s.` };
-        return {
-          status: "fail",
-          detail: `${model} in ${region}: ${res.error ?? "no answer"}. Free rule-based answers are used meanwhile.`,
-          fix: /access|denied|403|not authorized|subscription/i.test(res.error ?? "")
-            ? "In the AWS console open Amazon Bedrock → Model access (in this region) and request access to the Anthropic models; it is usually approved within minutes."
-            : /not found|404|invalid model|unsupported/i.test(res.error ?? "")
-              ? "This model isn't available in that region. Set AQUALEDGER_BEDROCK_REGION (e.g. us-east-1) or a different model id, then redeploy."
-              : "See the error above; it comes straight from Bedrock.",
-        };
-      })
-    ),
   ]);
 
   const worst: Status = checks.some((c) => c.status === "fail") ? "fail" : checks.some((c) => c.status === "warn") ? "warn" : "pass";

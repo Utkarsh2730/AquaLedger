@@ -45,7 +45,7 @@ const NAMES: [RegExp, string][] = [
   [/^\/alerts\/?$/, "Leak alerts"],
   [/^\/bills\/?$/, "Bills"],
   [/^\/bills\/view/, "bill"],
-  [/^\/insights\/?$/, "Forecast & AI"],
+  [/^\/insights\/?$/, "Forecast & insights"],
   [/^\/flats\/?$/, "Flats & residents"],
   [/^\/flats\/detail/, "flat"],
   [/^\/sources\/?$/, "Water sources"],

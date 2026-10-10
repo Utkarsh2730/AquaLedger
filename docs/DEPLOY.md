@@ -35,11 +35,8 @@ variables** for the live app, then redeploy.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `AQUALEDGER_CHAT_MODEL` | `anthropic.claude-sonnet-5-5` | Model for "Ask your water data". `off` = free rule-based answers |
-| `AQUALEDGER_INSIGHT_MODEL` | `anthropic.claude-haiku-5-5` | Model for the monthly summary. `off` = free rule-based summary |
-| `AQUALEDGER_BEDROCK_REGION` | `us-east-1` | Region the Bedrock calls go to |
-| `AQUALEDGER_SENDER_EMAIL` | (unset) | Turns on **emailing residents their login** (Amazon SES) from this address. See section 4 |
-| `AQUALEDGER_WHATSAPP_PHONE_ID` | (unset) | Turns on **automatic WhatsApp logins** from a WhatsApp Business number (`phone-number-id-…`). Without it, the committee sends them in one tap each. See section 4 |
+| `AQUALEDGER_SENDER_EMAIL` | (unset) | Turns on **emailing residents their login** (Amazon SES) from this address. See section 3 |
+| `AQUALEDGER_WHATSAPP_PHONE_ID` | (unset) | Turns on **automatic WhatsApp logins** from a WhatsApp Business number (`phone-number-id-…`). Without it, the committee sends them in one tap each. See section 3 |
 | `AQUALEDGER_WHATSAPP_REGION` | app's region | Region where that WhatsApp number is linked in AWS End User Messaging Social |
 | `AQUALEDGER_WHATSAPP_TEMPLATE` / `_LANGUAGE` | `aqualedger_login` / `en` | Use your own approved template instead (same 4 variables: society, flat, code, link) |
 | `AQUALEDGER_BUDGET_EMAIL` | (unset) | If set, creates a monthly AWS Budget that emails you at 80% and 100% |
@@ -52,23 +49,8 @@ export AQUALEDGER_BUDGET_EMAIL=you@example.com
 npx ampx sandbox
 ```
 
-## 3. Turning on the AI (Claude on Amazon Bedrock)
 
-The AI is on by default, but Bedrock only answers once your account has access to the models.
-Until then the app uses the free rule-based answers and the System check tells you what's missing.
-
-1. In the AWS console, switch the region to **US East (N. Virginia) us-east-1** (or the region you
-   set in `AQUALEDGER_BEDROCK_REGION`).
-2. Open **Amazon Bedrock → Model access → Modify model access**, select the **Anthropic** models
-   (Claude Sonnet and Claude Haiku), fill in the short use-case form, and submit. Approval is
-   usually a few minutes.
-3. Back in the app: **Settings → System check → Run check**. Both AI rows should turn ✅. In
-   **Forecast & AI**, answers now say "answered by Claude on Bedrock".
-
-Cost: the model only sees a compact summary of your data (~1-2k tokens). A chat answer costs well
-under ₹1; the monthly summary is written once a month per society.
-
-## 4. Sending residents their login (email and WhatsApp)
+## 3. Sending residents their login (email and WhatsApp)
 
 Committee members sign in with email and password. Residents don't have accounts. On **Flats → Send
 residents their login**, the committee pastes or uploads its resident list
@@ -127,7 +109,7 @@ few rupees for a whole society. One-tap mode is free.
 
 Cost: SES includes 3,000 emails a month free for the first 12 months, then $0.10 per 1,000.
 
-## 5. Checking the live backend
+## 4. Checking the live backend
 
 **Settings → System check** tests, from inside your AWS account:
 
@@ -139,6 +121,5 @@ Cost: SES includes 3,000 emails a month free for the first 12 months, then $0.10
 | Resident access emails | the sender address is verified and SES is out of the sandbox (warns while not set up) |
 | Resident WhatsApp | one-tap mode, or the WhatsApp Business number is linked and the login template is approved (submits it if missing) |
 | Smart-meter endpoint | the public meter URL is reachable and rejects a wrong device token |
-| AI answers / summaries | Bedrock answers a test prompt with the configured model and region |
 
 Every ⚠️ or ❌ comes with the fix. **Copy results** puts the whole report on your clipboard.

@@ -30,7 +30,7 @@ const SHOWCASE = [
     alt: "Usage-based bills compared with the old equal split",
   },
   {
-    tag: "Forecast & AI",
+    tag: "Forecast & insights",
     title: "Know how many tankers you'll need before summer hits",
     body: "A seasonal forecast tells you next month's demand and tanker budget. Ask questions in plain English: why did the bill go up, which flats use the most, how much did leak detection save.",
     points: ["3-month moving average × seasonal factor", "Monthly summary written for the committee", "Plain-English answers from your own data"],
@@ -50,7 +50,7 @@ const SHOWCASE = [
 const TIERS = [
   { name: "Starter", price: "₹10", features: ["Up to 150 flats", "Manual + CSV readings", "Usage-based billing", "Leak alerts by email"] },
   { name: "Society", price: "₹12", features: ["Up to 600 flats", "Smart-meter live alerts", "Shortage forecasts", "Resident portal"], highlight: true },
-  { name: "Township", price: "₹15", features: ["Unlimited flats", "AI summaries & chat", "Multiple committee admins", "Priority support"] },
+  { name: "Township", price: "₹15", features: ["Unlimited flats", "Monthly summaries & Q&A", "Multiple committee admins", "Priority support"] },
 ];
 
 const FAQ = [

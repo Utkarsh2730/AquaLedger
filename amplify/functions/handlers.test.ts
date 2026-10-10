@@ -5,16 +5,6 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Bedrock as it fails before model access is granted: the app must fall back, not break
-vi.mock("@anthropic-ai/bedrock-sdk", () => ({
-  AnthropicBedrockMantle: class {
-    messages = {
-      create: async () => {
-        throw Object.assign(new Error("You don't have access to the model with the specified model ID."), { status: 403, name: "PermissionDeniedError" });
-      },
-    };
-  },
-}));
 import { ddb } from "./shared/db";
 import { cognito } from "./shared/identity";
 import { sns } from "./shared/notify";
@@ -373,8 +363,6 @@ describe("end-to-end through the Lambda handlers", () => {
 
     process.env.ALERTS_TOPIC_ARN = "arn:aws:sns:ap-south-1:1:alerts";
     process.env.METER_INGEST_URL = "https://meter.example/";
-    process.env.CHAT_MODEL_ID = "anthropic.claude-sonnet-5-5";
-    process.env.INSIGHT_MODEL_ID = "off";
     vi.spyOn(sns, "send").mockImplementation(async (cmd: any) =>
       cmd.constructor.name === "ListSubscriptionsByTopicCommand"
         ? {
@@ -395,16 +383,12 @@ describe("end-to-end through the Lambda handlers", () => {
       expect(by.emails.detail).toMatch(/Waiting for confirmation: treasurer@example.com/);
       expect(by.meter.status).toBe("pass");
       expect(fetchSpy.mock.calls[0][1]?.headers).toMatchObject({ "x-device-token": "system-check-invalid-token" });
-      expect(by["ai-chat"].status).toBe("fail");
-      expect(by["ai-chat"].fix).toMatch(/Model access/);
-      expect(by["ai-insights"].status).toBe("warn");
-      expect(res.overall).toBe("fail");
+      expect(res.overall).toBe("warn");
       await expect(queryApi(appsync("systemCheck", { societyId: sid }, ["other"]))).rejects.toThrow(/Unauthorized/);
 
-      // chat still answers, from the rules, and says why the AI wasn't used
+      // chat answers from the society's own numbers
       const chat: any = await queryApi(appsync("askWaterData", { societyId: sid, question: "Why did our bill go up this month?" }, [sid]));
       expect(chat).toMatchObject({ source: "rules" });
-      expect(chat.aiError).toMatch(/403 PermissionDeniedError/);
 
       // the scheduled run records itself, which turns the schedule check green
       await analysis({ "detail-type": "Scheduled Event", source: "aws.scheduler" } as any);
@@ -414,8 +398,6 @@ describe("end-to-end through the Lambda handlers", () => {
     } finally {
       delete process.env.ALERTS_TOPIC_ARN;
       delete process.env.METER_INGEST_URL;
-      delete process.env.CHAT_MODEL_ID;
-      delete process.env.INSIGHT_MODEL_ID;
       fetchSpy.mockRestore();
     }
   });

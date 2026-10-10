@@ -255,7 +255,7 @@ export default function DashboardPage() {
           <span className="flex items-center gap-2">
             <SparklesIcon width={18} height={18} className="text-brand-600" /> Monthly insight
           </span>
-        } action={data.insight && <Badge tone="info">{data.insight.generatedBy === "rules" ? "auto summary" : "AI"}</Badge>}>
+        } action={data.insight && <Badge tone="info">auto summary</Badge>}>
         {data.insight ? (
           <p className="text-sm leading-relaxed text-slate-700">{data.insight.summaryText}</p>
         ) : (

@@ -28,7 +28,7 @@ const TONE = {
 } as const;
 const SUMMARY = { pass: "Everything is working.", warn: "Working, with things to finish.", fail: "Something needs fixing." } as const;
 
-/** Runs the backend's systemCheck: database, nightly schedule, alert emails, meter endpoint, AI. */
+/** Runs the backend's systemCheck: database, nightly schedule, alert emails, meter endpoint, resident messages. */
 export default function SystemCheck({ societyId }: { societyId: string }) {
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState(false);
@@ -74,7 +74,7 @@ export default function SystemCheck({ societyId }: { societyId: string }) {
         </div>
       }
     >
-      <p className="text-sm text-slate-600">Tests the live backend: database, nightly leak scan, alert emails, smart-meter endpoint and AI.</p>
+      <p className="text-sm text-slate-600">Tests the live backend: database, nightly leak scan, alert emails, and smart-meter endpoint.</p>
       <ErrorBox error={error} />
       {result && (
         <div className="mt-4 space-y-2">

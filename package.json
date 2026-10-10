@@ -34,7 +34,6 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
-    "@anthropic-ai/bedrock-sdk": "^0.34.4",
     "@aws-amplify/backend": "^1.25.1",
     "@aws-amplify/backend-cli": "^1.10.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.1147.0",

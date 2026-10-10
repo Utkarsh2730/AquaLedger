@@ -7,43 +7,12 @@ const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 const kl = (litres: number) => `${round(litres / 1000, 1).toLocaleString("en-IN")} kL`;
 const pct = (a: number, b: number) => (b > 0 ? round(((a - b) / b) * 100) : 0);
 
-/**
- * Compact, model-friendly facts about a society. This is all the AI ever sees (no raw
- * readings), which keeps Bedrock prompts small and cheap.
- */
-export function buildFacts(d: DashboardSummary, extra: { month?: string; societyName?: string; openAlerts?: string[] } = {}) {
-  const months = d.monthly.filter((m) => m.consumedLitres > 0 || monthCost(m) > 0).slice(-6);
-  return {
-    society: extra.societyName,
-    asOf: d.asOf.slice(0, 10),
-    currentMonth: d.currentMonth,
-    kpis: d.kpis,
-    months: months.map((m) => ({
-      month: m.month,
-      consumedKl: round(m.consumedLitres / 1000, 1),
-      municipalKl: round(m.municipalLitres / 1000, 1),
-      borewellKl: round(m.borewellLitres / 1000, 1),
-      tankerKl: round(m.tankerLitres / 1000, 1),
-      tankers: m.tankerCount,
-      totalCostInr: round(monthCost(m)),
-      tankerCostInr: round(m.tankerCost),
-    })),
-    costPerKlBySource: d.costPerKlBySource.map((s) => ({ source: s.source, inrPerKl: s.costPerKl })),
-    topFlatsLast30Days: d.topFlats.slice(0, 5).map((f) => ({ flat: f.flatLabel, litres: f.litres, timesAverage: f.vsAverage })),
-    openAlerts: extra.openAlerts ?? [],
-    leakImpactLast90Days: d.impact,
-    forecastNextMonth: d.forecast,
-  };
-}
-
-export type Facts = ReturnType<typeof buildFacts>;
-
 function lastTwoComplete(d: DashboardSummary): [SourceMonth | undefined, SourceMonth | undefined] {
   const complete = d.monthly.filter((m) => m.month < d.currentMonth && m.consumedLitres > 0);
   return [complete[complete.length - 1], complete[complete.length - 2]];
 }
 
-/** Rule-based monthly summary: free, instant, and the fallback when Bedrock is off. */
+/** Rule-based monthly summary: free, instant, and worked out from the dashboard numbers. */
 export function ruleBasedSummary(d: DashboardSummary, openAlerts: string[] = []): string {
   const [last, prev] = lastTwoComplete(d);
   const parts: string[] = [];
@@ -71,7 +40,7 @@ export function ruleBasedSummary(d: DashboardSummary, openAlerts: string[] = [])
 }
 
 /**
- * Keyword answers for "Ask your water data" when Bedrock is not enabled. Covers the questions
+ * Keyword answers for "Ask your water data", worked out from the society's own numbers. Covers the questions
  * in the demo script; anything else gets the monthly summary.
  */
 export function ruleBasedAnswer(question: string, d: DashboardSummary, openAlerts: string[] = []): string {

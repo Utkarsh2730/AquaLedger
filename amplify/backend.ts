@@ -118,16 +118,6 @@ if (whatsappPhoneId) {
   );
 }
 
-// Optional Bedrock access. Unused (and free) unless INSIGHT_MODEL_ID / CHAT_MODEL_ID are set.
-for (const fn of [fns.analysis, fns.queryApi]) {
-  fn.addToRolePolicy(
-    new iam.PolicyStatement({
-      actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream", "bedrock-mantle:*"],
-      resources: ["*"],
-    })
-  );
-}
-
 // Public HTTPS endpoint for the meter simulator (auth = per-society device token in a header).
 const ingestUrl = fns.meterIngest.addFunctionUrl({
   authType: lambda.FunctionUrlAuthType.NONE,

@@ -14,7 +14,6 @@ interface Msg {
   role: "user" | "assistant";
   text: string;
   source?: string;
-  aiError?: string;
 }
 
 const SUGGESTIONS = ["Why did our bill go up this month?", "How many tankers do we need next month?", "Which flats use the most water?", "Are there any leaks?"];
@@ -65,8 +64,8 @@ export default function InsightsPage() {
     setQuestion("");
     setAsking(true);
     try {
-      const res = unwrap<{ answer: string; source: string; aiError?: string }>(await client.queries.askWaterData({ societyId, question: q }));
-      setMessages((m) => [...m, { role: "assistant", text: res.answer, source: res.source, aiError: res.aiError }]);
+      const res = unwrap<{ answer: string; source: string }>(await client.queries.askWaterData({ societyId, question: q }));
+      setMessages((m) => [...m, { role: "assistant", text: res.answer, source: res.source }]);
     } catch (err) {
       setMessages((m) => [...m, { role: "assistant", text: err instanceof Error ? err.message : "Something went wrong" }]);
     } finally {
@@ -77,7 +76,7 @@ export default function InsightsPage() {
   const f = dash?.forecast;
   return (
     <div className="space-y-6">
-      <PageHeader title="Forecast & AI insights" subtitle="Plan tankers before the sump runs dry, and ask your water data questions in plain English." />
+      <PageHeader title="Forecast & insights" subtitle="Plan tankers before the sump runs dry, and ask your water data questions in plain English." />
       <ErrorBox error={error} />
       {!dash ? (
         <Spinner />
@@ -118,8 +117,8 @@ export default function InsightsPage() {
                     {m.text}
                   </div>
                   {m.source && (
-                    <div className="mt-0.5 text-[10px] text-slate-400" title={m.aiError}>
-                      {m.source === "bedrock" ? "answered by Claude on Bedrock" : m.aiError ? "rule-based answer (AI unavailable, see Settings → System check)" : "rule-based answer (AI off)"}
+                    <div className="mt-0.5 text-[10px] text-slate-400">
+                      worked out from your society's data
                     </div>
                   )}
                 </div>
@@ -156,7 +155,7 @@ export default function InsightsPage() {
               {insights.map((i) => (
                 <div key={i.id}>
                   <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
-                    {monthLabel(i.month)} <Badge tone="info">{i.generatedBy === "rules" ? "auto" : "AI"}</Badge>
+                    {monthLabel(i.month)} <Badge tone="info">auto</Badge>
                   </div>
                   <p className="text-sm leading-relaxed text-slate-700">{i.summaryText}</p>
                 </div>

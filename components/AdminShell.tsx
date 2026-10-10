@@ -35,7 +35,7 @@ const NAV = [
     group: "Money & planning",
     items: [
       { href: "/bills", label: "Bills", Icon: ReceiptIcon },
-      { href: "/insights", label: "Forecast & AI", Icon: SparklesIcon },
+      { href: "/insights", label: "Forecast & insights", Icon: SparklesIcon },
     ],
   },
   {

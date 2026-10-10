@@ -157,9 +157,9 @@ const awsCard = () =>
        ["Amplify Gen 2", "hosting + infrastructure as code"],
        ["Cognito", "committee sign-in, per-society access"],
        ["AppSync + DynamoDB", "API and data"],
-       ["Lambda", "billing, leak scan, forecast, AI"],
+       ["Lambda", "billing, leak scan, forecast, insights"],
        ["EventBridge Scheduler", "nightly scan, monthly bills"],
-       ["Bedrock (Claude)", "monthly summary + chat"],
+       ["Insights engine", "monthly summary + Q&A"],
        ["SNS / SES / WhatsApp", "alerts and resident logins"],
        ["Function URL", "live smart-meter ingest"],
      ]
@@ -247,16 +247,16 @@ await page.getByText("Amount due").first().waitFor();
 await cap("3", "Every resident gets a bill that shows exactly how it was calculated.");
 await sleep(5000);
 
-// ── 4 forecast + AI ──────────────────────────────────────────────────────────────────────────
-mark("4. Tanker forecast and AI answers");
-await page.setContent(chapterCard(4, "Forecast & AI", "Book tankers before summer hits, and ask your water data anything."));
+// ── 4 forecast + answers ─────────────────────────────────────────────────────────────────────────
+mark("4. Tanker forecast and plain-English answers");
+await page.setContent(chapterCard(4, "Forecast & answers", "Book tankers before summer hits, and ask your water data anything."));
 await sleep(3000);
 await page.goto(B + "/insights/", { waitUntil: "networkidle" });
 await page.getByText("Tankers to book").first().waitFor();
 await moveTo(page.getByText("Tankers to book").first());
 await cap("4", "Next month: how much water you'll need, how many tankers, and the budget.");
 await sleep(4500);
-await cap("4", "Ask in plain English. Answers come from your own data (Claude on Amazon Bedrock).");
+await cap("4", "Ask in plain English, and get answers worked out from your own data.");
 await click(page.getByRole("button", { name: "Why did our bill go up this month?" }));
 await page.getByText("Total water cost went from").first().waitFor();
 await sleep(6000);
@@ -402,14 +402,14 @@ In this demo:
 • A live dashboard of water sources and costs
 • Automatic leak detection (usage spikes and 2–4 a.m. flow), with alerts to the committee
 • Fair usage-based bills instead of an equal split
-• Tanker forecast and plain-English answers from your data (Claude on Amazon Bedrock)
+• Tanker forecast and plain-English answers from your data
 • A smart meter raising a live leak alert
 • Resident logins sent by email and WhatsApp, with no sign-ups
 
 Chapters
 ${chapterLines.join("\n")}
 
-Built serverless on AWS (Amplify Gen 2, Cognito, AppSync, DynamoDB, Lambda, EventBridge Scheduler, Bedrock, SNS/SES), designed to fit the AWS free tier.
+Built serverless on AWS (Amplify Gen 2, Cognito, AppSync, DynamoDB, Lambda, EventBridge Scheduler, SNS/SES), designed to fit the AWS free tier.
 
 #AWS #Serverless #WaterManagement #Hackathon #SmartCity #NextJS
 `;

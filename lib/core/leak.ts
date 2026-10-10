@@ -14,7 +14,7 @@ export interface LeakFinding {
   message: string;
   /** estimated water lost per day if nothing is fixed, for the impact numbers */
   wasteLitresPerDay: number;
-  /** numbers behind the finding, for the UI and for the AI summary */
+  /** numbers behind the finding, for the UI and the monthly summary */
   evidence: Record<string, number | string>;
 }
 
