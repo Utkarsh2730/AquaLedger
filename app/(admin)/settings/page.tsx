@@ -7,6 +7,7 @@ import type { Schema } from "@/amplify/data/resource";
 import { useSociety } from "@/components/SocietyContext";
 import { Button, Card, ErrorBox, Field, Input, PageHeader, Spinner } from "@/components/ui";
 import SystemCheck from "@/components/SystemCheck";
+import CopyRow from "@/components/CopyRow";
 
 type Society = Schema["Society"]["type"];
 
@@ -46,6 +47,7 @@ export default function SettingsPage() {
   }
 
   async function rotateToken() {
+    if (!confirm("Rotate the device token? Meters using the current token stop sending readings until you update them.")) return;
     const token = Array.from(crypto.getRandomValues(new Uint8Array(18)), (b) => b.toString(16).padStart(2, "0")).join("");
     const res = await client.models.Society.update({ societyId, deviceToken: token });
     if (res.data) setSociety(res.data);
@@ -110,22 +112,27 @@ export default function SettingsPage() {
         <div className="space-y-6">
           <SystemCheck societyId={societyId} />
           <Card title="Smart meters">
-            <p className="mb-3 text-sm text-slate-600">
-              Meters send this device token in the <code>x-device-token</code> header. Connection details are on <Link href="/live" className="font-medium text-brand-700 underline underline-offset-2">Live meters</Link>.
+            <p className="mb-4 text-sm text-slate-600">
+              Meters send the device token in the <code>x-device-token</code> header. The endpoint and request format are on{" "}
+              <Link href="/live" className="font-medium text-brand-700 underline underline-offset-2">
+                Live meters
+              </Link>
+              .
             </p>
-            <code className="block break-all rounded-lg bg-slate-100 p-2.5 text-xs">{society.deviceToken}</code>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="space-y-2.5">
+              <CopyRow label="Society ID" value={societyId} />
+              {society.deviceToken && <CopyRow label="Device token" value={society.deviceToken} secret />}
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
               <Button variant="secondary" onClick={rotateToken}>
                 Rotate token
               </Button>
-              <span className="text-xs text-slate-400">
-                Society ID <code>{societyId}</code>
-              </span>
+              <span className="text-xs text-slate-500">Issues a new token. Meters using the old one stop working until you update them.</span>
             </div>
           </Card>
-          <Card title="Sample data" className="border-rose-200/80">
+          <Card title="Sample data">
             <p className="mb-3 text-sm text-slate-600">Replaces all of this society&apos;s readings, bills and alerts with 6 months of sample data, for exploring or training. Don&apos;t use it once you have real data.</p>
-            <Button variant="danger" onClick={resetDemo} disabled={busy}>
+            <Button variant="secondary" className="border-rose-300! text-rose-700! hover:bg-rose-50!" onClick={resetDemo} disabled={busy}>
               {busy ? "Loading…" : "Replace with sample data"}
             </Button>
           </Card>

@@ -403,6 +403,9 @@ const chapterLines = chapters
   .map((c) => `${ts(c.s)} ${c.title}`);
 const description = `AquaLedger is a water management app for apartment societies. It tracks every litre from municipal supply, borewells and tankers, catches leaks automatically, bills each flat by actual usage, and forecasts how many tankers next month needs.
 
+Try it live: https://main.d200aasztxvlg1.amplifyapp.com
+Source code: https://github.com/Utkarsh2730/AquaLedger
+
 In this demo:
 • A live dashboard of water sources and costs
 • Automatic leak detection (usage spikes and 2–4 a.m. flow), with alerts to the committee
