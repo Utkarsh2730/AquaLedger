@@ -20,7 +20,7 @@ Built on a fully serverless AWS Amplify Gen 2 backend that fits the **AWS free t
 | Intelligence | Alert & bill emails (SNS) | `amplify/functions/shared/notify.ts` |
 | Intelligence | Nightly scan, monthly billing (EventBridge schedule) | `amplify/functions/analysis` |
 | Intelligence | Monthly summary + "Ask your water data" chat (rule-based, free) | `/insights` |
-| Extras | Live leak demo: virtual meter in the browser or `scripts/meter_simulator.py` | `/live`, `meter-ingest` Lambda |
+| Extras | Live meters: connection details for real meters, an in-browser meter test, and `scripts/meter_simulator.py` | `/live`, `meter-ingest` Lambda |
 | Extras | Resident portal: open with the flat's access code (no account), which the committee sends to every resident from its own list by email and WhatsApp; own usage vs building average, own bills | `/resident` |
 | Extras | Landing page with pricing tiers | `/` |
 
@@ -50,7 +50,7 @@ npm install
 npm run demo        # http://localhost:3000
 ```
 
-Every page works: leak scans, bills, forecast, chat, the live meter, flats, settings. Changes are kept in the browser; **Settings → Reset demo data** starts over. It uses the same leak, billing and forecast logic as the real backend, so it's also your **stage backup if Wi-Fi or AWS fails**.
+Every page works: leak scans, bills, forecast, chat, the live meter, flats, settings. Changes are kept in the browser; **Settings → Replace with sample data** starts over. It uses the same leak, billing and forecast logic as the real backend, so it's also your **stage backup if Wi-Fi or AWS fails**.
 
 ## Deploy
 
@@ -75,7 +75,7 @@ npm run dev                 # http://localhost:3000
 Then:
 
 1. Open the URL → **Committee login → Create Account**, confirm the email code.
-2. Create the society with **Load 6 months of demo data** ticked.
+2. Create the society with **Start with 6 months of sample data** ticked.
 3. Confirm the "AWS Notification - Subscription Confirmation" email so alerts reach you.
 4. **Alerts → Scan for leaks now**: B-202 is flagged twice (spike + night flow).
 5. **Bills → Generate bills**, open one, *Download PDF*.
@@ -91,7 +91,7 @@ Then:
 6. Ask your water data: "Why did our bill go up this month?"
 7. Close: ₹10-15 per flat per month; pays for itself with one leak.
 
-Before presenting: **Settings → Reset demo data** for a known starting state.
+Before presenting: **Settings → Replace with sample data** for a known starting state.
 
 ## Develop
 

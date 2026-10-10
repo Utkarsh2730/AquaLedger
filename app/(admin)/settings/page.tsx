@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { client, unwrap } from "@/lib/client";
 import type { Schema } from "@/amplify/data/resource";
 import { useSociety } from "@/components/SocietyContext";
@@ -48,16 +49,16 @@ export default function SettingsPage() {
     const token = Array.from(crypto.getRandomValues(new Uint8Array(18)), (b) => b.toString(16).padStart(2, "0")).join("");
     const res = await client.models.Society.update({ societyId, deviceToken: token });
     if (res.data) setSociety(res.data);
-    setMsg("Device token rotated. Update your simulator.");
+    setMsg("Device token rotated. Update your meters with the new token.");
   }
 
   async function resetDemo() {
-    if (!confirm("Reset demo data? Readings, supplies and tankers are regenerated; alerts, bills and insights are deleted.")) return;
+    if (!confirm("Replace this society's data with sample data? All readings, supplies and tankers are replaced, and alerts, bills and insights are deleted. This can't be undone.")) return;
     setBusy(true);
     setError(null);
     try {
       const res = unwrap<{ readings: number; leakFlat: string }>(await client.mutations.seedDemoData({ societyId }));
-      setMsg(`Demo data reset: ${res.readings.toLocaleString("en-IN")} readings, planted leak in ${res.leakFlat}.`);
+      setMsg(`Sample data loaded: ${res.readings.toLocaleString("en-IN")} readings, with a leak in ${res.leakFlat} to find.`);
     } catch (err) {
       setError(err);
     } finally {
@@ -110,7 +111,7 @@ export default function SettingsPage() {
           <SystemCheck societyId={societyId} />
           <Card title="Smart meters">
             <p className="mb-3 text-sm text-slate-600">
-              Meters (and the simulator) send this device token in the <code>x-device-token</code> header.
+              Meters send this device token in the <code>x-device-token</code> header. Connection details are on <Link href="/live" className="font-medium text-brand-700 underline underline-offset-2">Live meters</Link>.
             </p>
             <code className="block break-all rounded-lg bg-slate-100 p-2.5 text-xs">{society.deviceToken}</code>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -122,10 +123,10 @@ export default function SettingsPage() {
               </span>
             </div>
           </Card>
-          <Card title="Demo data" className="border-rose-200/80">
-            <p className="mb-3 text-sm text-slate-600">Replaces this society&apos;s readings, bills and alerts with fresh demo data. Run it right before you present.</p>
+          <Card title="Sample data" className="border-rose-200/80">
+            <p className="mb-3 text-sm text-slate-600">Replaces all of this society&apos;s readings, bills and alerts with 6 months of sample data, for exploring or training. Don&apos;t use it once you have real data.</p>
             <Button variant="danger" onClick={resetDemo} disabled={busy}>
-              {busy ? "Resetting…" : "Reset demo data"}
+              {busy ? "Loading…" : "Replace with sample data"}
             </Button>
           </Card>
         </div>

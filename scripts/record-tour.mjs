@@ -164,18 +164,18 @@ await sleep(4600);
 
 // 6 · live meter
 await click(page.getByRole("link", { name: "Live meters" }));
-await page.getByRole("button", { name: /Start meter/ }).waitFor();
+await page.getByRole("button", { name: /Start test readings/ }).waitFor();
 await cap("6", "Smart meters stream live readings. A normal flat…");
-await click(page.getByRole("button", { name: /Start meter/ }));
+await click(page.getByRole("button", { name: /Start test readings/ }));
 await sleep(7000);
 await cap("6", "…and someone leaves a tap running.");
-await click(page.getByRole("button", { name: /Open the tap/ }));
+await click(page.getByRole("button", { name: /Simulate a leak/ }));
 await page.getByText("is drawing").first().waitFor({ timeout: 20000 });
 await sleep(800);
 await cap("6", "An alert in seconds, and an email to the committee.");
 await moveTo(page.getByText("is drawing").first());
 await sleep(5200);
-await click(page.getByRole("button", { name: /Stop meter/ }));
+await click(page.getByRole("button", { name: /Stop test/ }));
 await cap(null, null);
 
 // 7 · residents

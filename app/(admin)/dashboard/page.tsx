@@ -76,16 +76,16 @@ export default function DashboardPage() {
         <ErrorBox error={error} />
         <Card>
           <p className="text-sm text-slate-600">
-            Load 6 months of realistic demo data (readings with summer spikes, tanker deliveries and a hidden leak in flat B-202), or start adding real readings and
-            supply entries.
+            Add your first meter readings and water supply entries, or connect smart meters. Want to look around first? Load 6 months of sample data with
+            summer spikes, tanker deliveries and a leak to find.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button onClick={loadDemo} disabled={running}>
-              {running ? "Loading demo data… (~20 s)" : "Load demo data"}
-            </Button>
-            <Link href="/readings" className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <Link href="/readings" className="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-700">
               Add readings
             </Link>
+            <Button variant="secondary" onClick={loadDemo} disabled={running}>
+              {running ? "Loading sample data… (~20 s)" : "Explore with sample data"}
+            </Button>
           </div>
         </Card>
       </div>

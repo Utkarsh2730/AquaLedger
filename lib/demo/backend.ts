@@ -5,7 +5,7 @@
  *
  * Use it as the stage backup if Wi-Fi or AWS fails, and for clicking through the UI locally.
  * Changes are kept in this browser's localStorage (the 14k generated readings are rebuilt from
- * the seed instead of stored); Settings → Reset demo data starts over.
+ * the seed instead of stored); Settings → Replace with sample data starts over.
  */
 import { generateSeed } from "@/lib/core/seed";
 import { planBilling, planLeakAlerts } from "@/lib/core/jobs";

@@ -40,8 +40,8 @@ const SHOWCASE = [
   {
     tag: "Live meters",
     title: "Watch a burst pipe show up in real time",
-    body: "Smart meters (or the included simulator) stream readings every few seconds. Abnormal flow raises an alert and emails the committee straight away.",
-    points: ["Works with any meter that can send an HTTPS request", "Per-society device tokens", "Python simulator included for demos"],
+    body: "Smart meters stream readings every few seconds. Abnormal flow raises an alert and emails the committee straight away.",
+    points: ["Works with any meter that can send an HTTPS request", "Per-society device tokens", "Test the whole chain from your browser"],
     img: "/screens/live.jpg",
     alt: "Live meter chart with an abnormal-flow alert",
   },
@@ -56,7 +56,7 @@ const TIERS = [
 const FAQ = [
   { q: "Do we need smart meters?", a: "No. Most societies start with the readings they already take: type them in or upload a CSV. Smart meters add live leak alerts, and you can add them flat by flat." },
   { q: "What can residents see?", a: "Only their own flat: their usage against the building average, and their bills once the committee issues them. Never another flat's data." },
-  { q: "How long does setup take?", a: "About a minute: create the society, add blocks and flats, and log your water sources. You can load six months of demo data first to see everything working." },
+  { q: "How long does setup take?", a: "About a minute: create the society, add blocks and flats, and log your water sources. You can load six months of sample data first to see everything working." },
   { q: "Where is our data stored?", a: "On AWS in the Mumbai region, in a fully serverless setup. Each society's data is isolated by its own access group." },
   { q: "What if a reading is wrong?", a: "Bills stay drafts until the committee issues them, and re-running the bill run never touches bills you've already issued or marked paid." },
 ];
@@ -166,7 +166,7 @@ export default function Landing() {
       {/* stats band */}
       <section className="mt-16 bg-slate-950 py-14 text-white">
         <div className="mx-auto max-w-6xl px-4 md:px-6">
-          <p className="text-center text-sm text-slate-400">From six months of data in our 40-flat demo society</p>
+          <p className="text-center text-sm text-slate-400">From six months of data in a 40-flat sample society</p>
           <div className="mt-8 grid grid-cols-2 gap-8 text-center md:grid-cols-4">
             {[
               ["8×", "tanker water costs this much more than municipal supply"],
@@ -216,7 +216,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-center text-sm text-slate-500">Cost per kilolitre by source in the demo society. A leak is paid for at the tanker price.</p>
+          <p className="mt-6 text-center text-sm text-slate-500">Cost per kilolitre by source in the sample society. A leak is paid for at the tanker price.</p>
         </div>
       </section>
 
@@ -271,7 +271,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-4 md:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Same water bill. Fairly shared.</h2>
-            <p className="mt-3 text-slate-600">September in the demo society: ₹16,041 of water for 40 flats.</p>
+            <p className="mt-3 text-slate-600">September in the sample society: ₹16,041 of water for 40 flats.</p>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-6">
@@ -404,7 +404,7 @@ export default function Landing() {
         <div className="relative mx-auto max-w-5xl overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-600 via-cyan-700 to-teal-800 px-6 py-14 text-center text-white md:px-12">
           <SparkIcon className="absolute -right-6 -top-6 h-40 w-40 text-white/10" />
           <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Catch your society’s first leak this week.</h2>
-          <p className="mx-auto mt-3 max-w-xl text-cyan-100">Set up takes a minute. Load demo data to explore, then add your own readings when you’re ready.</p>
+          <p className="mx-auto mt-3 max-w-xl text-cyan-100">Set up takes a minute. Load sample data to explore, then add your own readings when you’re ready.</p>
           <Link href="/login" className="mt-8 inline-block rounded-xl bg-white px-6 py-3 font-semibold text-cyan-800 shadow-lg hover:bg-cyan-50">
             Set up your society →
           </Link>

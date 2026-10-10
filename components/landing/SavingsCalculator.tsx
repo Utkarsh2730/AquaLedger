@@ -52,7 +52,7 @@ export default function SavingsCalculator() {
         <Slider label="What you pay for tanker water" value={price} set={setPrice} min={80} max={300} step={10} fmt={(v) => `${inr(v)}/kL`} />
         <p className="text-xs leading-relaxed text-slate-500">
           About 1 in 10 homes has a significant leak (US EPA WaterSense estimate), so a 300-flat society can expect ~30 a year. Each is assumed to waste ~{LEAK_LITRES_PER_DAY} L/day, like the
-          running cistern in our demo society, until AquaLedger flags it the next morning. AquaLedger priced at ₹12 per flat per month.
+          running cistern in our sample society, until AquaLedger flags it the next morning. AquaLedger priced at ₹12 per flat per month.
         </p>
       </div>
       <div className="flex flex-col justify-center gap-5 bg-gradient-to-br from-cyan-600 to-teal-700 p-6 text-white md:p-8">

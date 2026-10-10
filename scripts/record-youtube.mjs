@@ -192,7 +192,7 @@ await cap(null, "AquaLedger: one place for the committee to run the society's wa
 await sleep(3500);
 await smoothScroll(900);
 await sleep(2600);
-await cap(null, "Set up a society in a minute, or try it with realistic demo data.");
+await cap(null, "Set up a society in a minute, or explore it with sample data.");
 await smoothScroll(1900);
 await sleep(3200);
 await cap(null, null);
@@ -271,18 +271,18 @@ mark("5. Live smart-meter leak alert");
 await showCard(chapterCard(5, "Live smart meters", "A tap left running raises an alert within seconds."));
 await sleep(3000);
 await page.goto(B + "/live/", { waitUntil: "networkidle" });
-await page.getByRole("button", { name: /Start meter/ }).waitFor();
+await page.getByRole("button", { name: /Start test readings/ }).waitFor();
 await cap("5", "A smart meter streams readings every few seconds. Normal use first…");
-await click(page.getByRole("button", { name: /Start meter/ }));
+await click(page.getByRole("button", { name: /Start test readings/ }));
 await sleep(7500);
 await cap("5", "…then someone leaves a tap running.");
-await click(page.getByRole("button", { name: /Open the tap/ }));
+await click(page.getByRole("button", { name: /Simulate a leak/ }));
 await page.getByText("is drawing").first().waitFor({ timeout: 25000 });
 await sleep(700);
 await moveTo(page.getByText("is drawing").first());
 await cap("5", "Alert in seconds, and an email to the committee.");
 await sleep(5500);
-await click(page.getByRole("button", { name: /Stop meter/ }));
+await click(page.getByRole("button", { name: /Stop test/ }));
 
 // ── 6 residents ──────────────────────────────────────────────────────────────────────────────
 mark("6. Resident access by email and WhatsApp");

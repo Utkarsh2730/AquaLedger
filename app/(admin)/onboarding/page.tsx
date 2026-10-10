@@ -14,7 +14,7 @@ export default function OnboardingPage() {
   const [blocks, setBlocks] = useState("A, B, C, D");
   const [perBlock, setPerBlock] = useState(10);
   const [commonCharge, setCommonCharge] = useState(150);
-  const [seedDemo, setSeedDemo] = useState(true);
+  const [seedDemo, setSeedDemo] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
@@ -67,9 +67,9 @@ export default function OnboardingPage() {
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" checked={seedDemo} onChange={(e) => setSeedDemo(e.target.checked)} className="mt-1" />
             <span>
-              <b>Load 6 months of realistic demo data</b>
+              <b>Start with 6 months of sample data</b>
               <br />
-              <span className="text-slate-500">Readings with summer spikes, tanker deliveries and a hidden leak in flat B-202.</span>
+              <span className="text-slate-500">To explore before your own readings arrive: summer spikes, tanker deliveries and a leak in flat B-202. You can replace it any time.</span>
             </span>
           </label>
           <ErrorBox error={error} />
