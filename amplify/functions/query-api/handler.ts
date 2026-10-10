@@ -167,10 +167,11 @@ async function systemCheck(societyId: string) {
     check("resident-email", "Resident access emails", async () => {
       const sender = process.env.SENDER_EMAIL;
       if (!sender) {
+        // optional, like automatic WhatsApp: logins still go out by WhatsApp, link or printed slip
         return {
-          status: "warn",
-          detail: "Not set up: share access codes by link or WhatsApp instead.",
-          fix: "Set AQUALEDGER_SENDER_EMAIL to an address you own, redeploy, then click the verification link Amazon SES emails to it.",
+          status: "pass",
+          detail: "Off: residents get their login by WhatsApp, link or printed slip. Nothing to set up.",
+          fix: "Optional: to email logins too, set AQUALEDGER_SENDER_EMAIL to an address you own, redeploy, then click the verification link Amazon SES emails to it.",
         };
       }
       const m = await mailStatus();
