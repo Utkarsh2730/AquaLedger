@@ -115,4 +115,5 @@ B-202,2026-10-01,3,21.5
 
 `npx ampx sandbox delete`, or delete the app in the Amplify console.
 
-##Author-Utkarsh Sonthalia
+Author-Utkarsh Sonthalia
+Link-https://main.d200aasztxvlg1.amplifyapp.com
