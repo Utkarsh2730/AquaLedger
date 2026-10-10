@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { getRoles } from "@/lib/client";
+import { DEMO, getRoles } from "@/lib/client";
 import { Spinner } from "./ui";
 
 interface SocietyCtx {
@@ -36,7 +36,8 @@ export function SocietyProvider({ children }: { children: ReactNode }) {
       setSocietyId(id);
       setChecked(true);
       if (!id && !onOnboarding) router.replace("/onboarding");
-      else if (id && onOnboarding && !force) router.replace("/dashboard");
+      // the offline demo always has its sample society, but still shows setup after "Create Account"
+      else if (id && onOnboarding && !force && !DEMO) router.replace("/dashboard");
     },
     [router, onOnboarding]
   );

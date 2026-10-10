@@ -37,8 +37,8 @@ export interface LeakOptions {
 
 /**
  * Spike rule: a flat's usage on targetDay exceeds its normal (a 30-day mean ending a week
- * earlier) by more than 2.5 standard deviations, and by at least 25% so very steady flats don't
- * trip on noise. The one-week gap keeps a leak that started a few days ago out of its own
+ * earlier) by more than 2.5 standard deviations, and by at least 30% so very steady flats and
+ * busy weekends don't trip on noise. The one-week gap keeps a leak that started a few days ago out of its own
  * baseline; otherwise it would slowly look "normal" and stop being flagged.
  */
 export function detectSpikes(flats: FlatRec[], readings: ReadingRec[], opts: LeakOptions = {}): LeakFinding[] {
@@ -65,7 +65,7 @@ export function detectSpikes(flats: FlatRec[], readings: ReadingRec[], opts: Lea
     const m = mean(baseline);
     const sd = Math.max(stdDev(baseline), m * 0.05);
     const score = (today - m) / sd;
-    if (score > z && today > m * 1.25) {
+    if (score > z && today > m * 1.3) {
       const severity: Severity = score > 6 ? "high" : score > 4 ? "medium" : "low";
       findings.push({
         flatId: flat.id,

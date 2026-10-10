@@ -9,8 +9,8 @@ import { Button, Card, ErrorBox, Field, Input, PageHeader } from "@/components/u
 export default function OnboardingPage() {
   const router = useRouter();
   const { refresh } = useSociety();
-  const [name, setName] = useState("Green Meadows CHS");
-  const [city, setCity] = useState("Pune");
+  const [name, setName] = useState("");
+  const [city, setCity] = useState("");
   const [blocks, setBlocks] = useState("A, B, C, D");
   const [perBlock, setPerBlock] = useState(10);
   const [commonCharge, setCommonCharge] = useState(150);
@@ -48,10 +48,10 @@ export default function OnboardingPage() {
       <Card>
         <form onSubmit={submit} className="space-y-4">
           <Field label="Society name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Green Meadows CHS" required />
           </Field>
           <Field label="City">
-            <Input value={city} onChange={(e) => setCity(e.target.value)} />
+            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Pune" />
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Blocks / wings" hint="Comma separated">

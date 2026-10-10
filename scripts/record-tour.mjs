@@ -95,6 +95,7 @@ const moveTo = async (loc) => {
   await sleep(250);
 };
 const click = async (loc) => { await moveTo(loc); await loc.click(); };
+const typeIn = async (loc, text) => { await click(loc); await loc.pressSequentially(text, { delay: 45 }); };
 const smoothScroll = (y) => page.evaluate((yy) => window.scrollTo({ top: yy, behavior: "smooth" }), y);
 const card = (title, sub, foot) => `<!doctype html><html><head><meta charset="utf-8"><style>
   body{margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
@@ -110,92 +111,107 @@ await startCast();
 await page.setContent(card("Every litre. Every rupee. Every leak.", "How an apartment society tracks its water, catches leaks and bills each flat fairly.", "A 90-second tour"));
 await sleep(4200);
 
-// 1 · dashboard
-await page.goto(B + "/dashboard/", { waitUntil: "networkidle" });
+// 1 · committee sign-in
+await page.goto(B + "/", { waitUntil: "networkidle" });
+await click(page.getByRole("link", { name: /Committee login/ }));
+await page.getByRole("tab", { name: /Create Account/i }).waitFor();
+await cap("1", "The committee creates an account once, confirms the email and sets up the society.");
+await moveTo(page.getByRole("tab", { name: /Create Account/i }));
+await sleep(2600);
+await cap("1", "After that, members just sign in.");
+await typeIn(page.getByLabel(/^Email/i), "secretary@greenmeadows.in");
+await typeIn(page.getByLabel(/^Password/i), "Water@2026");
+await click(page.getByRole("button", { name: /^Sign in$/i }));
+await page.waitForURL(/dashboard/);
+
+// 2 · dashboard
 await page.getByText("Top 10 flats").first().waitFor();
-await cap("1", "See where the water comes from: municipal, borewell and tankers.");
+await cap("2", "See where the water comes from: municipal, borewell and tankers.");
 await sleep(2500);
 await moveTo(page.getByText("Cost per kL by source").first());
-await cap("1", "Tanker water costs ~8× municipal, so every wasted litre is bought at tanker prices.");
+await cap("2", "Tanker water costs ~8× municipal, so every wasted litre is bought at tanker prices.");
 await sleep(4200);
 
-// 2 · leak scan
-await cap("2", "Every night, each flat is checked for usage spikes and 2-4 a.m. flow.");
+// 3 · leak scan
+await cap("3", "Every night, each flat is checked for usage spikes and 2-4 a.m. flow.");
 await click(page.getByRole("button", { name: /Run analysis now/ }));
 await page.getByText("Leak detection impact").first().waitFor();
 await sleep(600);
 await moveTo(page.getByText("Leak detection impact").first());
-await cap("2", "Leak caught in B-202: ~481 L a day, about ₹2,700 a month.");
+await cap("3", "Leak caught in B-202: ~481 L a day, about ₹2,700 a month.");
 await sleep(4500);
 
-// 3 · alerts
+// 4 · alerts
 await click(page.getByRole("link", { name: "Leak alerts" }));
 await page.getByText("Night flow (2-4 a.m.)").first().waitFor();
-await cap("3", "The committee gets the flat, the pattern and the litres wasted, by email too.");
+await cap("4", "The committee gets the flat, the pattern and the litres wasted, by email too.");
 await sleep(2000);
 await moveTo(page.getByText("Night flow (2-4 a.m.)").first());
 await sleep(2600);
 
-// 4 · bills
+// 5 · bills
 await click(page.getByRole("link", { name: "Bills", exact: true }));
 await page.getByText("Old equal split").first().waitFor();
-await cap("4", "Bills in one click: each flat pays for the litres it actually used.");
+await cap("5", "Bills in one click: each flat pays for the litres it actually used.");
 await sleep(2500);
 await moveTo(page.getByText("Flats paying less now").first());
-await cap("4", "19 of 40 flats now pay less than the old equal split.");
+await cap("5", "19 of 40 flats now pay less than the old equal split.");
 await sleep(3800);
 await smoothScroll(260); await sleep(900);
 await click(page.locator("table a").first());
 await page.getByText("Amount due").first().waitFor();
-await cap("4", "Every resident gets a clear bill showing how it was calculated.");
+await cap("5", "Every resident gets a clear bill showing how it was calculated.");
 await sleep(4200);
 
-// 5 · forecast + AI
+// 6 · forecast + answers
 await click(page.getByRole("link", { name: "Forecast & insights" }));
 await page.getByText("Tankers to book").first().waitFor();
-await cap("5", "The forecast says how many tankers to book next month, and the budget.");
+await cap("6", "The forecast says how many tankers to book next month, and the budget.");
 await sleep(2200);
 await moveTo(page.getByText("Tankers to book").first());
 await sleep(2400);
-await cap("5", "Ask your water data anything, in plain English.");
+await cap("6", "Ask your water data anything, in plain English.");
 await click(page.getByRole("button", { name: "Why did our bill go up this month?" }));
 await page.getByText("Total water cost went from").first().waitFor();
 await sleep(4600);
 
-// 6 · live meter
+// 7 · live meter
 await click(page.getByRole("link", { name: "Live meters" }));
 await page.getByRole("button", { name: /Start test readings/ }).waitFor();
-await cap("6", "Smart meters stream live readings. A normal flat…");
+await cap("7", "Smart meters stream live readings. A normal flat…");
 await click(page.getByRole("button", { name: /Start test readings/ }));
 await sleep(7000);
-await cap("6", "…and someone leaves a tap running.");
+await cap("7", "…and someone leaves a tap running.");
 await click(page.getByRole("button", { name: /Simulate a leak/ }));
 await page.getByText("is drawing").first().waitFor({ timeout: 20000 });
 await sleep(800);
-await cap("6", "An alert in seconds, and an email to the committee.");
+await cap("7", "An alert in seconds, and an email to the committee.");
 await moveTo(page.getByText("is drawing").first());
 await sleep(5200);
 await click(page.getByRole("button", { name: /Stop test/ }));
 await cap(null, null);
 
-// 7 · residents
+// 8 · residents
 await click(page.getByRole("link", { name: /Flats & residents/ }));
 await page.getByRole("button", { name: "Give access to all flats" }).waitFor();
-await cap("7", "Residents don't sign up. The committee gives every flat an access code…");
+await cap("8", "Residents don't sign up. The committee gives every flat an access code…");
 await sleep(2200);
 page.once("dialog", (d) => d.accept());
 await click(page.getByRole("button", { name: "Give access to all flats" }));
 await page.getByText(/Access codes for \d+ flats/).first().waitFor();
 await sleep(600);
 await moveTo(page.getByText(/Access codes for \d+ flats/).first());
-await cap("7", "…in one click, sent by email or WhatsApp, or printed as slips.");
+await cap("8", "…in one click, sent by email or WhatsApp, or printed as slips.");
 await sleep(4200);
 const row = page.locator("#access-sheet tr").first();
-const residentUrl = (await row.locator("td").nth(2).innerText()).trim();
-await page.goto(residentUrl.replace(/^https?:\/\/[^/]+/, B), { waitUntil: "networkidle" });
+const residentCode = (await row.locator("td").nth(1).innerText()).trim();
+await page.goto(B + "/resident/", { waitUntil: "networkidle" });
+await cap("8", "Residents open Resident login and type the code, or tap the link they were sent.");
+await typeIn(page.getByLabel(/Flat access code/i), residentCode);
+await click(page.getByRole("button", { name: /Open my flat/ }));
 await page.getByText("Daily use vs building average").first().waitFor();
-await cap("7", "The resident opens the link and sees only their flat: usage and bills.");
-await sleep(4800);
+await cap("8", "They see only their own flat: usage, bills and leak alerts.");
+await sleep(4500);
 
 // outro
 await page.setContent(card("Set up your society in a minute.", "Catch leaks, end equal-split disputes and plan tankers before summer.", "Serverless on AWS · ₹10-15 per flat per month"));
